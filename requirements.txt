@@ -1,0 +1,5 @@
+# Backend web ligero. No requiere PyTorch ni CUDA:
+# el upscaling lo hace el binario realesrgan-ncnn-vulkan.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9

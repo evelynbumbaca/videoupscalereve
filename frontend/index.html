@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReVE Upscaler</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🎬</span>
+      <div>
+        <h1>ReVE Upscaler</h1>
+        <p class="tagline">Mejorá tus videos de IA a HD y más — 100% local</p>
+      </div>
+    </div>
+    <div id="systemBadge" class="badge badge-muted">Detectando entorno…</div>
+  </header>
+
+  <main class="layout">
+    <!-- Panel de configuración -->
+    <section class="card" id="setupCard">
+      <div id="dropzone" class="dropzone">
+        <input type="file" id="fileInput" accept="video/*,.gif" hidden />
+        <div class="dz-inner">
+          <div class="dz-icon">⬆️</div>
+          <p class="dz-title">Arrastrá tu video acá</p>
+          <p class="dz-sub">o <button type="button" class="link" id="browseBtn">elegí un archivo</button></p>
+          <p class="dz-formats">MP4 · MOV · MKV · WEBM · AVI · GIF</p>
+        </div>
+        <div id="fileChip" class="file-chip hidden">
+          <span class="fc-name" id="fileName"></span>
+          <button type="button" class="fc-remove" id="removeFile" aria-label="Quitar">✕</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label>Aumento de resolución</label>
+          <div class="segmented" id="scaleGroup">
+            <button data-value="2" type="button">2×</button>
+            <button data-value="3" type="button">3×</button>
+            <button data-value="4" type="button" class="active">4×</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="modelSelect">Modelo de IA</label>
+          <select id="modelSelect">
+            <option value="animevideo">Video IA / Animado (recomendado)</option>
+            <option value="general">Fotorrealista general</option>
+            <option value="anime">Ilustración / Anime</option>
+          </select>
+          <p class="hint">Para clips generados con IA, el primero suele dar el mejor resultado.</p>
+        </div>
+
+        <div class="field switch-field">
+          <label class="switch">
+            <input type="checkbox" id="interpolate" />
+            <span class="slider"></span>
+          </label>
+          <div>
+            <span class="switch-label">Suavizar movimiento (interpolar frames)</span>
+            <p class="hint">Duplica los fps para un movimiento más fluido. Requiere RIFE instalado.</p>
+          </div>
+        </div>
+      </div>
+
+      <button id="startBtn" class="primary" disabled>Mejorar video</button>
+      <p id="modeNote" class="mode-note"></p>
+    </section>
+
+    <!-- Panel de progreso / resultado -->
+    <section class="card" id="progressCard" hidden>
+      <h2 id="progressTitle">Procesando…</h2>
+      <div class="progress-wrap">
+        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        <div class="progress-meta">
+          <span id="progressStage">Preparando…</span>
+          <span id="progressPct">0%</span>
+        </div>
+      </div>
+      <p id="progressMsg" class="progress-msg"></p>
+
+      <div id="resultBox" class="result-box hidden">
+        <video id="resultVideo" controls playsinline></video>
+        <a id="downloadBtn" class="primary" download>⬇️ Descargar video</a>
+        <button id="againBtn" class="ghost">Procesar otro</button>
+      </div>
+
+      <div id="errorBox" class="error-box hidden">
+        <p class="error-title">Ocurrió un problema</p>
+        <p id="errorMsg" class="error-msg"></p>
+        <button id="retryBtn" class="ghost">Volver a intentar</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Tus archivos se procesan solo en tu equipo.</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Binarios y modelos descargados (pesados, se bajan con scripts/setup_tools.py)
+tools/
+
+# Archivos de trabajo
+uploads/
+outputs/
+work/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
