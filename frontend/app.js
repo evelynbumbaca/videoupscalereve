@@ -98,6 +98,11 @@ $("#scaleGroup").addEventListener("click", (e) => {
   state.scale = parseInt(btn.dataset.value, 10);
 });
 
+// Mostrar las opciones de marca de agua solo cuando está activada.
+$("#removeWm").addEventListener("change", (e) => {
+  $("#wmOptions").classList.toggle("hidden", !e.target.checked);
+});
+
 // --- Envío y seguimiento --------------------------------------------------
 $("#startBtn").addEventListener("click", startJob);
 $("#retryBtn").addEventListener("click", resetToSetup);
@@ -113,6 +118,9 @@ async function startJob() {
   fd.append("use_ai", String(state.system?.mode === "ia"));
   fd.append("interpolate", String($("#interpolate").checked));
   fd.append("interp_factor", "2");
+  fd.append("remove_watermark", String($("#removeWm").checked));
+  fd.append("wm_corner", $("#wmCorner").value);
+  fd.append("wm_size", $("#wmSize").value);
 
   showProgress();
   setProgress(0, "Subiendo", "Enviando el video…");

@@ -35,6 +35,9 @@ async def upload(
     use_ai: bool = Form(True),
     interpolate: bool = Form(False),
     interp_factor: int = Form(2),
+    remove_watermark: bool = Form(False),
+    wm_corner: str = Form("br"),
+    wm_size: str = Form("medium"),
 ) -> JSONResponse:
     ext = Path(file.filename or "").suffix.lower()
     if ext not in config.ALLOWED_EXTENSIONS:
@@ -44,6 +47,10 @@ async def upload(
         model = "animevideo"
     if scale not in (2, 3, 4):
         scale = 4
+    if wm_corner not in ("br", "bl", "tr", "tl"):
+        wm_corner = "br"
+    if wm_size not in ("small", "medium", "large"):
+        wm_size = "medium"
 
     job = store.create(
         filename=file.filename or "video",
@@ -53,6 +60,9 @@ async def upload(
             "use_ai": use_ai,
             "interpolate": interpolate,
             "interp_factor": interp_factor if interp_factor in (2, 4) else 2,
+            "remove_watermark": remove_watermark,
+            "wm_corner": wm_corner,
+            "wm_size": wm_size,
         },
     )
 

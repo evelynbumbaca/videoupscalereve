@@ -125,6 +125,9 @@ select {
 select:focus { outline: none; border-color: var(--accent); }
 
 .switch-field { display: flex; align-items: flex-start; gap: 14px; }
+.wm-row { display: flex; gap: 10px; }
+.wm-row select { flex: 1; min-width: 0; }
+@media (max-width: 440px) { .wm-row { flex-direction: column; } }
 .switch-label { font-size: 14px; font-weight: 500; }
 .switch { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
 .switch input { opacity: 0; width: 0; height: 0; }

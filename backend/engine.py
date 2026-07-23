@@ -107,14 +107,23 @@ def _parse_fraction(text: str) -> float:
 
 
 # --- Extracción -----------------------------------------------------------
-def extract_frames(video: Path, out_dir: Path, progress: ProgressCB | None = None) -> int:
+def extract_frames(
+    video: Path,
+    out_dir: Path,
+    progress: ProgressCB | None = None,
+    vf: str | None = None,
+) -> int:
+    """Extrae los frames del video. Si `vf` trae un filtro de ffmpeg (por
+    ejemplo, un `delogo` para quitar una marca de agua), se aplica acá, antes
+    del upscaling, para que la IA después suavice cualquier resto."""
     ffmpeg = config.ffmpeg_path()
     if not ffmpeg:
         raise EngineError("ffmpeg no está disponible. Ejecutá scripts/setup_tools.py.")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     base = [ffmpeg, "-y", "-i", str(video)]
-    tail = [str(out_dir / "frame_%08d.png")]
+    filter_args = ["-vf", vf] if vf else []
+    tail = filter_args + [str(out_dir / "frame_%08d.png")]
 
     # La opción para "extraer todos los frames sin duplicar" cambió entre
     # versiones de ffmpeg:
@@ -162,6 +171,51 @@ def extract_audio(video: Path, out_path: Path) -> bool:
     ]
     res = _run(cmd)
     return res.returncode == 0 and out_path.exists() and out_path.stat().st_size > 0
+
+
+# --- Quitar marca de agua -------------------------------------------------
+# Tamaño del recuadro como fracción del ancho/alto del video.
+_WM_SIZES = {
+    "small":  (0.14, 0.09),
+    "medium": (0.20, 0.12),
+    "large":  (0.28, 0.16),
+}
+_WM_CORNERS = {"br", "bl", "tr", "tl"}
+
+
+def delogo_filter(corner: str, size: str, width: int, height: int) -> str:
+    """Construye un filtro `delogo` de ffmpeg para tapar la marca de agua de
+    una esquina. `delogo` reconstruye la zona a partir de los píxeles vecinos.
+
+    corner: br (inf. der.), bl (inf. izq.), tr (sup. der.), tl (sup. izq.)
+    size:   small | medium | large
+    """
+    if corner not in _WM_CORNERS:
+        corner = "br"
+    fw, fh = _WM_SIZES.get(size, _WM_SIZES["medium"])
+
+    w = max(8, int(width * fw))
+    h = max(8, int(height * fh))
+    margin_x = max(2, int(width * 0.012))
+    margin_y = max(2, int(height * 0.012))
+
+    if corner in ("br", "tr"):
+        x = width - w - margin_x
+    else:  # bl, tl
+        x = margin_x
+    if corner in ("br", "bl"):
+        y = height - h - margin_y
+    else:  # tr, tl
+        y = margin_y
+
+    # delogo necesita que el recuadro quede al menos 1 px dentro del frame
+    # (usa los píxeles de alrededor para reconstruir). Lo ajustamos por las dudas.
+    x = min(max(1, x), max(1, width - w - 1))
+    y = min(max(1, y), max(1, height - h - 1))
+    w = max(4, min(w, width - x - 1))
+    h = max(4, min(h, height - y - 1))
+
+    return f"delogo=x={x}:y={y}:w={w}:h={h}"
 
 
 # --- Upscaling con IA -----------------------------------------------------

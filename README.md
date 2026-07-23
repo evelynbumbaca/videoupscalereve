@@ -18,6 +18,7 @@ cualquier GPU (NVIDIA, AMD, Intel o Apple) e incluso por CPU.
 
 - Sube un video, elegí el aumento (**2× / 3× / 4×**) y el modelo, y descargá el resultado.
 - Modelos pensados para **video de IA / animación**, **fotorrealista** e **ilustración**.
+- **Quitar marca de agua** de una esquina (ej: la estrella de Veo/Gemini), con `delogo`.
 - Opción de **suavizar el movimiento** interpolando frames (RIFE) para más fps.
 - Barra de progreso real (frame por frame) y previsualización del resultado.
 - **Modo respaldo**: si todavía no descargaste los modelos de IA, la app igual

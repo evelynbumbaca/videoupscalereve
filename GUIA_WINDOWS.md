@@ -72,8 +72,11 @@ con el Bloc de notas para verlo).
 2. Elegí el **aumento**: empezá con **2×** para probar rápido; después subí a **4×**.
 3. Elegí el **modelo**: para videos hechos con IA, dejá el primero
    (*Video IA / Animado*).
-4. Apretá **"Mejorar video"** y mirá la barra de progreso.
-5. Cuando termina, **previsualizás** el resultado y lo **descargás**.
+4. *(Opcional)* Si tu video tiene una **marca de agua** en una esquina (como la
+   estrellita de Veo/Gemini), activá **"Quitar marca de agua"** y elegí en qué
+   esquina está y qué tamaño tiene.
+5. Apretá **"Mejorar video"** y mirá la barra de progreso.
+6. Cuando termina, **previsualizás** el resultado y lo **descargás**.
 
 El arriba a la derecha te muestra un cartelito verde **"IA activa"** cuando tu placa
 NVIDIA está lista. 👍

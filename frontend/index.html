@@ -66,6 +66,35 @@
             <p class="hint">Duplica los fps para un movimiento más fluido. Requiere RIFE instalado.</p>
           </div>
         </div>
+
+        <div class="field switch-field">
+          <label class="switch">
+            <input type="checkbox" id="removeWm" />
+            <span class="slider"></span>
+          </label>
+          <div>
+            <span class="switch-label">Quitar marca de agua</span>
+            <p class="hint">Borra un logo de una esquina (ej: la estrella de Veo/Gemini).</p>
+          </div>
+        </div>
+
+        <div class="field wm-options hidden" id="wmOptions">
+          <label>¿Dónde está la marca y qué tamaño tiene?</label>
+          <div class="wm-row">
+            <select id="wmCorner">
+              <option value="br">Esquina inferior derecha</option>
+              <option value="bl">Esquina inferior izquierda</option>
+              <option value="tr">Esquina superior derecha</option>
+              <option value="tl">Esquina superior izquierda</option>
+            </select>
+            <select id="wmSize">
+              <option value="small">Chica</option>
+              <option value="medium" selected>Mediana</option>
+              <option value="large">Grande</option>
+            </select>
+          </div>
+          <p class="hint">Se limpia antes de agrandar, así la IA disimula cualquier resto.</p>
+        </div>
       </div>
 
       <button id="startBtn" class="primary" disabled>Mejorar video</button>

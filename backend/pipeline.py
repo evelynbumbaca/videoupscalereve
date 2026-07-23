@@ -31,6 +31,9 @@ def process(job: Job, input_path: Path) -> Path:
     use_ai = bool(opts.get("use_ai", True)) and config.realesrgan_path() is not None
     interpolate = bool(opts.get("interpolate", False)) and config.rife_path() is not None
     interp_factor = int(opts.get("interp_factor", 2))
+    remove_wm = bool(opts.get("remove_watermark", False))
+    wm_corner = opts.get("wm_corner", "br")
+    wm_size = opts.get("wm_size", "medium")
 
     work = config.WORK_DIR / job.id
     frames_in = work / "in"
@@ -66,9 +69,13 @@ def process(job: Job, input_path: Path) -> Path:
         cb(1.0, f"{info.width}x{info.height} · {info.fps:.2f} fps · {info.n_frames} frames")
         base["acc"] += w
 
-        # 2) Extracción de frames + audio
-        cb, w = stage_progress("extract", "Extrayendo frames")
-        n_frames = engine.extract_frames(input_path, frames_in, progress=cb)
+        # 2) Extracción de frames (+ quitar marca de agua si corresponde) + audio
+        wm_filter = None
+        if remove_wm:
+            wm_filter = engine.delogo_filter(wm_corner, wm_size, info.width, info.height)
+        extract_label = "Extrayendo frames y quitando marca" if remove_wm else "Extrayendo frames"
+        cb, w = stage_progress("extract", extract_label)
+        n_frames = engine.extract_frames(input_path, frames_in, progress=cb, vf=wm_filter)
         has_audio = engine.extract_audio(input_path, audio_path) if info.has_audio else False
         base["acc"] += w
 
