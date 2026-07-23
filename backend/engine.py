@@ -171,6 +171,9 @@ def upscale_frames_ai(
         "-n", model_name,
         "-s", str(native),
         "-f", "png",
+        # tile size y GPU: claves para no agotar la VRAM en placas de 4 GB.
+        "-t", str(config.REALESRGAN_TILE_SIZE),
+        "-g", str(config.REALESRGAN_GPU_ID),
     ]
     if model_dir:
         cmd += ["-m", str(model_dir)]
@@ -277,7 +280,10 @@ def interpolate_frames(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     expected = total_frames * factor
-    cmd = [binary, "-i", str(in_dir), "-o", str(out_dir), "-n", str(expected)]
+    cmd = [
+        binary, "-i", str(in_dir), "-o", str(out_dir), "-n", str(expected),
+        "-g", str(config.REALESRGAN_GPU_ID),
+    ]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while proc.poll() is None:
         done = len(list(out_dir.glob("*.png")))

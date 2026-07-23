@@ -23,7 +23,8 @@ cualquier GPU (NVIDIA, AMD, Intel o Apple) e incluso por CPU.
 
 ## 🚀 Puesta en marcha (rápida)
 
-Requisito: **Python 3.10+**.
+Requisito: **Python 3.10+**. En Windows, instalá Python desde python.org marcando
+"Add python.exe to PATH".
 
 ```bash
 # 1) Instalar dependencias del servidor (livianas)
@@ -35,6 +36,10 @@ python scripts/setup_tools.py
 # 3) Arrancar
 python run.py
 ```
+
+> **No necesitás ninguna API ni clave de IA.** Todo el modelo corre localmente en tu
+> GPU con Real-ESRGAN. No hay costo por uso, no hace falta internet para procesar, y
+> los videos nunca salen de tu equipo.
 
 Se abre solo en `http://127.0.0.1:8000`. Arrastrás un video, elegís las opciones
 y listo.
@@ -63,6 +68,21 @@ El upscaling con IA es intensivo. Orientativo:
 
 Como los clips de IA suelen durar pocos segundos, incluso en equipos modestos es usable.
 Consejo: empezá con **2×** para probar y subí a **4×** cuando el resultado te convenza.
+
+### VRAM y tamaño de "tile"
+
+Real-ESRGAN procesa cada frame en bloques ("tiles") para no llenar la memoria de la
+GPU. En placas con **4 GB de VRAM** (como una RTX 500 Ada Laptop) el valor por defecto
+(`256`) está pensado para andar cómodo. Si alguna vez ves un error de *out of memory*,
+bajalo:
+
+```bash
+# Windows (PowerShell)
+$env:REVE_TILE_SIZE = "128"   # o 100 si hace falta
+python run.py
+```
+
+Para forzar una GPU concreta usá `REVE_GPU_ID` (0 = la primera). `-1` fuerza CPU.
 
 ---
 

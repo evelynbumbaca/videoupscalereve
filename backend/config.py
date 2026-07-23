@@ -28,6 +28,16 @@ ALLOWED_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v", ".gif"}
 # Cuántos jobs terminados guardamos en memoria antes de olvidarlos.
 MAX_JOBS_IN_MEMORY = 50
 
+# --- Ajustes de Real-ESRGAN (rendimiento / VRAM) --------------------------
+# Tamaño de "tile": Real-ESRGAN procesa cada frame en bloques para no llenar
+# la memoria de la GPU. En placas con poca VRAM (p. ej. 4 GB, como la RTX 500
+# Ada Laptop) conviene un valor moderado para evitar errores de "out of memory".
+#   0 = automático · 256 = buen equilibrio para ~4 GB · bajá a 128/100 si hay OOM.
+REALESRGAN_TILE_SIZE = int(os.environ.get("REVE_TILE_SIZE", "256"))
+
+# GPU a utilizar: 0 = la primera (tu RTX). -1 fuerza el uso de CPU (muy lento).
+REALESRGAN_GPU_ID = os.environ.get("REVE_GPU_ID", "0")
+
 
 def _find_binary(names: list[str], subfolders: list[str] | None = None) -> str | None:
     """Busca un ejecutable primero en tools/ y luego en el PATH del sistema.
