@@ -183,9 +183,26 @@ _WM_SIZES = {
 _WM_CORNERS = {"br", "bl", "tr", "tl"}
 
 
+def _delogo_str(x: int, y: int, w: int, h: int, width: int, height: int) -> str:
+    """Ajusta el recuadro para que quede dentro del frame y arma el filtro.
+    `delogo` necesita el recuadro al menos 1 px adentro (usa los píxeles de
+    alrededor para reconstruir la zona)."""
+    x = min(max(1, int(x)), max(1, width - 2))
+    y = min(max(1, int(y)), max(1, height - 2))
+    w = max(4, min(int(w), width - x - 1))
+    h = max(4, min(int(h), height - y - 1))
+    return f"delogo=x={x}:y={y}:w={w}:h={h}"
+
+
+def delogo_filter_box(x: int, y: int, w: int, h: int, width: int, height: int) -> str:
+    """Filtro `delogo` a partir de un recuadro EXACTO (en píxeles del video
+    original) que el usuario dibujó sobre la previsualización."""
+    return _delogo_str(x, y, w, h, width, height)
+
+
 def delogo_filter(corner: str, size: str, width: int, height: int) -> str:
-    """Construye un filtro `delogo` de ffmpeg para tapar la marca de agua de
-    una esquina. `delogo` reconstruye la zona a partir de los píxeles vecinos.
+    """Filtro `delogo` a partir de una esquina + tamaño (modo simple, sin
+    previsualización). Se usa como respaldo si no se marcó un recuadro exacto.
 
     corner: br (inf. der.), bl (inf. izq.), tr (sup. der.), tl (sup. izq.)
     size:   small | medium | large
@@ -199,23 +216,10 @@ def delogo_filter(corner: str, size: str, width: int, height: int) -> str:
     margin_x = max(2, int(width * 0.012))
     margin_y = max(2, int(height * 0.012))
 
-    if corner in ("br", "tr"):
-        x = width - w - margin_x
-    else:  # bl, tl
-        x = margin_x
-    if corner in ("br", "bl"):
-        y = height - h - margin_y
-    else:  # tr, tl
-        y = margin_y
+    x = width - w - margin_x if corner in ("br", "tr") else margin_x
+    y = height - h - margin_y if corner in ("br", "bl") else margin_y
 
-    # delogo necesita que el recuadro quede al menos 1 px dentro del frame
-    # (usa los píxeles de alrededor para reconstruir). Lo ajustamos por las dudas.
-    x = min(max(1, x), max(1, width - w - 1))
-    y = min(max(1, y), max(1, height - h - 1))
-    w = max(4, min(w, width - x - 1))
-    h = max(4, min(h, height - y - 1))
-
-    return f"delogo=x={x}:y={y}:w={w}:h={h}"
+    return _delogo_str(x, y, w, h, width, height)
 
 
 # --- Upscaling con IA -----------------------------------------------------

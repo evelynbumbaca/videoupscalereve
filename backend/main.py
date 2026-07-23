@@ -38,6 +38,10 @@ async def upload(
     remove_watermark: bool = Form(False),
     wm_corner: str = Form("br"),
     wm_size: str = Form("medium"),
+    wm_x: int = Form(0),
+    wm_y: int = Form(0),
+    wm_w: int = Form(0),
+    wm_h: int = Form(0),
 ) -> JSONResponse:
     ext = Path(file.filename or "").suffix.lower()
     if ext not in config.ALLOWED_EXTENSIONS:
@@ -63,6 +67,7 @@ async def upload(
             "remove_watermark": remove_watermark,
             "wm_corner": wm_corner,
             "wm_size": wm_size,
+            "wm_box": [max(0, wm_x), max(0, wm_y), max(0, wm_w), max(0, wm_h)],
         },
     )
 

@@ -34,6 +34,7 @@ def process(job: Job, input_path: Path) -> Path:
     remove_wm = bool(opts.get("remove_watermark", False))
     wm_corner = opts.get("wm_corner", "br")
     wm_size = opts.get("wm_size", "medium")
+    wm_box = opts.get("wm_box", [0, 0, 0, 0])
 
     work = config.WORK_DIR / job.id
     frames_in = work / "in"
@@ -72,7 +73,13 @@ def process(job: Job, input_path: Path) -> Path:
         # 2) Extracción de frames (+ quitar marca de agua si corresponde) + audio
         wm_filter = None
         if remove_wm:
-            wm_filter = engine.delogo_filter(wm_corner, wm_size, info.width, info.height)
+            bx, by, bw, bh = (wm_box + [0, 0, 0, 0])[:4]
+            if bw > 0 and bh > 0:
+                # Recuadro exacto marcado por el usuario en la previsualización.
+                wm_filter = engine.delogo_filter_box(bx, by, bw, bh, info.width, info.height)
+            else:
+                # Respaldo: esquina + tamaño.
+                wm_filter = engine.delogo_filter(wm_corner, wm_size, info.width, info.height)
         extract_label = "Extrayendo frames y quitando marca" if remove_wm else "Extrayendo frames"
         cb, w = stage_progress("extract", extract_label)
         n_frames = engine.extract_frames(input_path, frames_in, progress=cb, vf=wm_filter)

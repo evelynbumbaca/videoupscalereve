@@ -79,21 +79,16 @@
         </div>
 
         <div class="field wm-options hidden" id="wmOptions">
-          <label>¿Dónde está la marca y qué tamaño tiene?</label>
-          <div class="wm-row">
-            <select id="wmCorner">
-              <option value="br">Esquina inferior derecha</option>
-              <option value="bl">Esquina inferior izquierda</option>
-              <option value="tr">Esquina superior derecha</option>
-              <option value="tl">Esquina superior izquierda</option>
-            </select>
-            <select id="wmSize">
-              <option value="small">Chica</option>
-              <option value="medium" selected>Mediana</option>
-              <option value="large">Grande</option>
-            </select>
+          <label>Marcá la zona de la marca de agua</label>
+          <p class="hint">Arrastrá con el mouse para dibujar un recuadro justo encima de la marca (por ejemplo, la estrellita). Cuanto más ajustado, mejor.</p>
+          <div class="wm-stage" id="wmStage">
+            <canvas id="wmCanvas"></canvas>
+            <div class="wm-overlay" id="wmOverlay">Elegí un video para ver la previsualización.</div>
           </div>
-          <p class="hint">Se limpia antes de agrandar, así la IA disimula cualquier resto.</p>
+          <div class="wm-actions">
+            <button type="button" class="ghost-sm" id="wmClear">Borrar recuadro</button>
+            <span class="hint" id="wmHint"></span>
+          </div>
         </div>
       </div>
 

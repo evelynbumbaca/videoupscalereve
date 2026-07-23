@@ -8,6 +8,11 @@ const state = {
   scale: 4,
   system: null,
   pollTimer: null,
+  // Previsualización / marca de agua
+  objectUrl: null,
+  wmBox: null,          // [x, y, w, h] en píxeles del video ORIGINAL
+  videoW: 0,
+  videoH: 0,
 };
 
 // --- Detección del entorno ------------------------------------------------
@@ -79,6 +84,12 @@ function setFile(file) {
   $("#fileChip").classList.remove("hidden");
   $(".dz-inner").classList.add("hidden");
   $("#startBtn").disabled = false;
+
+  // Preparamos la previsualización para el marcado de la marca de agua.
+  if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+  state.objectUrl = URL.createObjectURL(file);
+  state.wmBox = null;
+  if ($("#removeWm").checked) loadPreview();
 }
 
 function clearFile() {
@@ -87,6 +98,8 @@ function clearFile() {
   $("#fileChip").classList.add("hidden");
   $(".dz-inner").classList.remove("hidden");
   $("#startBtn").disabled = true;
+  if (state.objectUrl) { URL.revokeObjectURL(state.objectUrl); state.objectUrl = null; }
+  state.wmBox = null;
 }
 
 // --- Controles ------------------------------------------------------------
@@ -98,10 +111,162 @@ $("#scaleGroup").addEventListener("click", (e) => {
   state.scale = parseInt(btn.dataset.value, 10);
 });
 
-// Mostrar las opciones de marca de agua solo cuando está activada.
+// --- Marca de agua: previsualización + dibujo del recuadro ----------------
 $("#removeWm").addEventListener("change", (e) => {
   $("#wmOptions").classList.toggle("hidden", !e.target.checked);
+  if (e.target.checked) loadPreview();
 });
+
+$("#wmClear").addEventListener("click", () => {
+  state.wmBox = null;
+  redrawPreview();
+  updateWmHint();
+});
+
+function updateWmHint() {
+  const hint = $("#wmHint");
+  if (!hint) return;
+  if (state.wmBox) {
+    const [, , w, h] = state.wmBox;
+    hint.textContent = `Zona marcada: ${Math.round(w)}×${Math.round(h)} px ✓`;
+    hint.style.color = "var(--ok)";
+  } else {
+    hint.textContent = "Dibujá el recuadro sobre la marca.";
+    hint.style.color = "";
+  }
+}
+
+// Carga un frame del video (a la mitad) en el canvas para poder marcar encima.
+function loadPreview() {
+  const overlay = $("#wmOverlay");
+  const canvas = $("#wmCanvas");
+  if (!state.objectUrl) {
+    overlay.textContent = "Elegí un video para ver la previsualización.";
+    overlay.classList.remove("hidden");
+    canvas.width = 0; canvas.height = 0;
+    return;
+  }
+  overlay.textContent = "Cargando previsualización…";
+  overlay.classList.remove("hidden");
+
+  const video = document.createElement("video");
+  video.muted = true;
+  video.preload = "auto";
+  video.src = state.objectUrl;
+
+  const onFail = () => {
+    overlay.textContent = "No se pudo cargar la previsualización de este video.";
+    overlay.classList.remove("hidden");
+  };
+  video.addEventListener("error", onFail);
+
+  video.addEventListener("loadeddata", () => {
+    // Buscamos un frame representativo (la marca suele estar en todo el video).
+    try { video.currentTime = Math.min(0.5, (video.duration || 1) / 2); }
+    catch { video.currentTime = 0; }
+  });
+
+  video.addEventListener("seeked", () => {
+    state.videoW = video.videoWidth;
+    state.videoH = video.videoHeight;
+    if (!state.videoW || !state.videoH) return onFail();
+
+    // Ajustamos el canvas al ancho disponible del contenedor (máx. 600 px).
+    const stageW = Math.min(600, $("#wmStage").clientWidth || 600);
+    const dispW = Math.min(stageW, state.videoW);
+    const dispH = Math.round(dispW * state.videoH / state.videoW);
+    const canvas = $("#wmCanvas");
+    canvas.width = dispW;
+    canvas.height = dispH;
+    state._wmVideo = video;   // guardamos para poder redibujar
+    redrawPreview();
+    $("#wmOverlay").classList.add("hidden");
+    updateWmHint();
+  }, { once: false });
+}
+
+// Redibuja el frame + el recuadro actual (si hay).
+function redrawPreview() {
+  const canvas = $("#wmCanvas");
+  const video = state._wmVideo;
+  if (!canvas || !video || !canvas.width) return;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (state.wmBox) {
+    const s = canvas.width / state.videoW;   // original -> display
+    const [ox, oy, ow, oh] = state.wmBox;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#6d5efc";
+    ctx.fillStyle = "rgba(109,94,252,0.2)";
+    ctx.fillRect(ox * s, oy * s, ow * s, oh * s);
+    ctx.strokeRect(ox * s, oy * s, ow * s, oh * s);
+  }
+}
+
+// Dibujo del recuadro con el mouse (o el dedo).
+(function setupBoxDrawing() {
+  const canvas = $("#wmCanvas");
+  if (!canvas) return;
+  let drawing = false, startX = 0, startY = 0;
+
+  const toDisplay = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    // CSS px -> px del buffer del canvas
+    return {
+      x: Math.max(0, Math.min(canvas.width, cx * canvas.width / rect.width)),
+      y: Math.max(0, Math.min(canvas.height, cy * canvas.height / rect.height)),
+    };
+  };
+
+  const boxToOriginal = (x0, y0, x1, y1) => {
+    const s = state.videoW / canvas.width;   // display -> original
+    const x = Math.min(x0, x1) * s;
+    const y = Math.min(y0, y1) * s;
+    const w = Math.abs(x1 - x0) * s;
+    const h = Math.abs(y1 - y0) * s;
+    return [Math.round(x), Math.round(y), Math.round(w), Math.round(h)];
+  };
+
+  const start = (e) => {
+    if (!state._wmVideo) return;
+    e.preventDefault();
+    drawing = true;
+    const p = toDisplay(e);
+    startX = p.x; startY = p.y;
+  };
+  const move = (e) => {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = toDisplay(e);
+    // dibujamos en vivo
+    redrawPreview();
+    const ctx = canvas.getContext("2d");
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#6d5efc";
+    ctx.fillStyle = "rgba(109,94,252,0.2)";
+    ctx.fillRect(Math.min(startX, p.x), Math.min(startY, p.y), Math.abs(p.x - startX), Math.abs(p.y - startY));
+    ctx.strokeRect(Math.min(startX, p.x), Math.min(startY, p.y), Math.abs(p.x - startX), Math.abs(p.y - startY));
+  };
+  const end = (e) => {
+    if (!drawing) return;
+    drawing = false;
+    const p = toDisplay(e.changedTouches ? { touches: e.changedTouches } : e);
+    const box = boxToOriginal(startX, startY, p.x, p.y);
+    // ignoramos recuadros diminutos (clicks accidentales)
+    state.wmBox = (box[2] >= 4 && box[3] >= 4) ? box : null;
+    redrawPreview();
+    updateWmHint();
+  };
+
+  canvas.addEventListener("mousedown", start);
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", end);
+  canvas.addEventListener("touchstart", start, { passive: false });
+  canvas.addEventListener("touchmove", move, { passive: false });
+  canvas.addEventListener("touchend", end);
+})();
 
 // --- Envío y seguimiento --------------------------------------------------
 $("#startBtn").addEventListener("click", startJob);
@@ -111,6 +276,16 @@ $("#againBtn").addEventListener("click", resetToSetup);
 async function startJob() {
   if (!state.file) return;
 
+  const removeWm = $("#removeWm").checked;
+  if (removeWm && !state.wmBox) {
+    // Pedimos que marquen la zona antes de continuar.
+    const hint = $("#wmHint");
+    hint.textContent = "Primero dibujá el recuadro sobre la marca de agua.";
+    hint.style.color = "var(--err)";
+    $("#wmOptions").scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
   const fd = new FormData();
   fd.append("file", state.file);
   fd.append("scale", String(state.scale));
@@ -118,9 +293,14 @@ async function startJob() {
   fd.append("use_ai", String(state.system?.mode === "ia"));
   fd.append("interpolate", String($("#interpolate").checked));
   fd.append("interp_factor", "2");
-  fd.append("remove_watermark", String($("#removeWm").checked));
-  fd.append("wm_corner", $("#wmCorner").value);
-  fd.append("wm_size", $("#wmSize").value);
+  fd.append("remove_watermark", String(removeWm));
+  if (removeWm && state.wmBox) {
+    const [x, y, w, h] = state.wmBox;
+    fd.append("wm_x", String(x));
+    fd.append("wm_y", String(y));
+    fd.append("wm_w", String(w));
+    fd.append("wm_h", String(h));
+  }
 
   showProgress();
   setProgress(0, "Subiendo", "Enviando el video…");
