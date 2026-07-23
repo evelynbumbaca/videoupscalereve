@@ -87,6 +87,19 @@ Para volver a usarla, doble clic de nuevo en `Iniciar ReVE Upscaler.bat`.
 
 ---
 
+## 🔄 Cómo actualizar (cuando haya mejoras o arreglos)
+
+Cuando te pase una versión nueva, **no hace falta reinstalar nada ni volver a bajar los
+modelos de IA**. Solo:
+
+1. Doble clic en **`Actualizar.bat`**.
+2. Se baja e instala la última versión del código automáticamente (unos segundos).
+3. Cuando termina, cerrá esa ventana y abrí la app con `Iniciar ReVE Upscaler.bat`.
+
+Tus modelos de IA, tu entorno y tus videos quedan intactos.
+
+---
+
 ## 🆘 Si algo no anda
 
 | Qué ves | Qué hacer |

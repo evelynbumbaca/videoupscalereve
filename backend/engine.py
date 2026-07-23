@@ -111,21 +111,43 @@ def extract_frames(video: Path, out_dir: Path, progress: ProgressCB | None = Non
         raise EngineError("ffmpeg no está disponible. Ejecutá scripts/setup_tools.py.")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    cmd = [
-        ffmpeg, "-y", "-i", str(video),
-        "-vsync", "0",
-        str(out_dir / "frame_%08d.png"),
-    ]
-    res = _run(cmd)
-    if res.returncode != 0:
-        raise EngineError(f"Falló la extracción de frames: {res.stderr.strip()[-400:]}")
+    base = [ffmpeg, "-y", "-i", str(video)]
+    tail = [str(out_dir / "frame_%08d.png")]
 
-    count = len(list(out_dir.glob("frame_*.png")))
-    if count == 0:
-        raise EngineError("No se extrajo ningún frame del video.")
-    if progress:
-        progress(1.0, f"{count} frames extraídos")
-    return count
+    # La opción para "extraer todos los frames sin duplicar" cambió entre
+    # versiones de ffmpeg:
+    #   • ffmpeg >= 5.1 (y las nuevas 8.x):  -fps_mode passthrough
+    #   • ffmpeg antiguos:                   -vsync 0
+    # Probamos en orden y, si una opción no existe, pasamos a la siguiente.
+    # Así funciona con cualquier build de ffmpeg sin que tengas que hacer nada.
+    sync_variants = [["-fps_mode", "passthrough"], ["-vsync", "0"], []]
+
+    last_err = ""
+    for sync in sync_variants:
+        # Limpiamos cualquier salida parcial de un intento anterior.
+        for f in out_dir.glob("frame_*.png"):
+            f.unlink(missing_ok=True)
+
+        res = _run(base + sync + tail)
+        if res.returncode == 0:
+            count = len(list(out_dir.glob("frame_*.png")))
+            if count > 0:
+                if progress:
+                    progress(1.0, f"{count} frames extraídos")
+                return count
+            last_err = "no se extrajo ningún frame del video"
+            continue
+
+        err = (res.stderr or "").strip()
+        last_err = err[-400:]
+        # Solo reintentamos si el fallo fue por una opción inexistente.
+        low = err.lower()
+        if "unrecognized option" in low or "option not found" in low:
+            continue
+        # Cualquier otro error (archivo dañado, formato raro): no insistimos.
+        break
+
+    raise EngineError(f"Falló la extracción de frames: {last_err}")
 
 
 def extract_audio(video: Path, out_path: Path) -> bool:
