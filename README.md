@@ -8,6 +8,10 @@ El upscaling lo hace **Real-ESRGAN** (IA) por debajo, orquestado con **ffmpeg**.
 No necesita instalar PyTorch ni CUDA: usa binarios `ncnn-vulkan` que funcionan con
 cualquier GPU (NVIDIA, AMD, Intel o Apple) e incluso por CPU.
 
+> 🪟 **¿Usás Windows y nunca hiciste esto?** Seguí la **[Guía fácil paso a paso
+> (GUIA_WINDOWS.md)](GUIA_WINDOWS.md)** — está pensada para arrancar de cero con
+> un doble clic.
+
 ---
 
 ## ✨ Qué hace
