@@ -139,19 +139,38 @@ def main() -> None:
 
     want = {args.only} if args.only else {"ffmpeg", "realesrgan", "rife"}
 
+    # Reutilizamos los "buscadores" del backend para detectar lo ya instalado
+    # (así una re-ejecución no vuelve a descargar lo que ya está).
+    sys.path.insert(0, str(ROOT))
+    try:
+        from backend import config as _cfg
+    except Exception:
+        _cfg = None
+
+    # Con --only forzamos la descarga aunque exista (útil para reparar).
+    forced = args.only is not None
+
     if "realesrgan" in want:
         print("• Real-ESRGAN (upscaling con IA)")
-        install("Real-ESRGAN", REALESRGAN, "realesrgan",
-                ["realesrgan-ncnn-vulkan", "realesrgan-ncnn-vulkan.exe"])
+        if not forced and _cfg and _cfg.realesrgan_path():
+            print("  ✅ Ya instalado, se omite la descarga.")
+        else:
+            install("Real-ESRGAN", REALESRGAN, "realesrgan",
+                    ["realesrgan-ncnn-vulkan", "realesrgan-ncnn-vulkan.exe"])
 
     if "rife" in want:
         print("• RIFE (interpolación de frames, opcional)")
-        install("RIFE", RIFE, "rife",
-                ["rife-ncnn-vulkan", "rife-ncnn-vulkan.exe"])
+        if not forced and _cfg and _cfg.rife_path():
+            print("  ✅ Ya instalado, se omite la descarga.")
+        else:
+            install("RIFE", RIFE, "rife",
+                    ["rife-ncnn-vulkan", "rife-ncnn-vulkan.exe"])
 
     if "ffmpeg" in want:
         print("• ffmpeg")
-        if shutil.which("ffmpeg") and shutil.which("ffprobe"):
+        if not forced and _cfg and _cfg.ffmpeg_path() and _cfg.ffprobe_path():
+            print("  ✅ ffmpeg ya está disponible, se omite la descarga.")
+        elif shutil.which("ffmpeg") and shutil.which("ffprobe"):
             print("  ✅ ffmpeg ya está en el PATH del sistema, no hace falta descargar.")
         elif plat == "macos":
             print("  ℹ️  En macOS instalalo con Homebrew:  brew install ffmpeg")
