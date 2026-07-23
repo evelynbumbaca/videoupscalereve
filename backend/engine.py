@@ -37,11 +37,13 @@ class VideoInfo:
 
 
 # Modelos de Real-ESRGAN incluidos en el release ncnn-vulkan.
-# clave -> (nombre de modelo para -n, escala nativa)
+# clave -> (nombre de modelo para -n, escala nativa, escalas soportadas de forma nativa)
+# Nota: animevideov3 puede correr directo en 2x/3x/4x (más rápido); los modelos
+# "x4plus" solo saben 4x, así que para 2x/3x corremos en 4x y reducimos después.
 MODELS = {
-    "animevideo": ("realesr-animevideov3", 4),   # ideal para video generado por IA / animado
-    "general": ("realesrgan-x4plus", 4),          # fotorrealista general
-    "anime": ("realesrgan-x4plus-anime", 4),      # ilustración / anime estático
+    "animevideo": ("realesr-animevideov3", 4, {2, 3, 4}),  # video IA / animado
+    "general": ("realesrgan-x4plus", 4, {4}),              # fotorrealista general
+    "anime": ("realesrgan-x4plus-anime", 4, {4}),          # ilustración / anime estático
 }
 
 
@@ -175,14 +177,21 @@ def upscale_frames_ai(
     if not binary:
         raise EngineError("realesrgan-ncnn-vulkan no está instalado.")
 
-    model_name, native = MODELS.get(model_key, MODELS["animevideo"])
+    model_name, native, supported = MODELS.get(model_key, MODELS["animevideo"])
     model_dir = _resolve_model_dir(binary)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Real-ESRGAN siempre corre a la escala nativa del modelo (todos son x4).
-    # Si el usuario pidió 2x o 3x, escalamos con IA a 4x y luego reducimos:
-    # es más robusto (evita errores de -s no soportado) y da un 2x/3x más limpio.
-    needs_resize = scale != native
+    # Optimización: si el modelo soporta la escala pedida de forma nativa
+    # (p. ej. animevideov3 con 2x), la corremos directo → mucho más rápido.
+    # Si no (modelos "x4plus" pidiendo 2x/3x), corremos en 4x y reducimos después:
+    # más robusto y da un 2x/3x más limpio, a costa de algo más de tiempo.
+    if scale in supported:
+        run_scale = scale
+        needs_resize = False
+    else:
+        run_scale = native
+        needs_resize = True
+
     raw_dir = out_dir.parent / f"{out_dir.name}_raw" if needs_resize else out_dir
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -191,7 +200,7 @@ def upscale_frames_ai(
         "-i", str(in_dir),
         "-o", str(raw_dir),
         "-n", model_name,
-        "-s", str(native),
+        "-s", str(run_scale),
         "-f", "png",
         # tile size y GPU: claves para no agotar la VRAM en placas de 4 GB.
         "-t", str(config.REALESRGAN_TILE_SIZE),
@@ -200,26 +209,32 @@ def upscale_frames_ai(
     if model_dir:
         cmd += ["-m", str(model_dir)]
 
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # IMPORTANTE: redirigimos la salida del proceso a un ARCHIVO de log, no a una
+    # tubería (PIPE). Real-ESRGAN imprime mucho texto de progreso; con PIPE, si no
+    # lo vamos leyendo, el búfer del sistema se llena y el proceso queda BLOQUEADO
+    # para siempre (deadlock) — sobre todo en Windows, con búferes chicos. Con un
+    # archivo esto no puede pasar y el progreso lo medimos contando frames de salida.
+    log_path = raw_dir.parent / "realesrgan.log"
 
-    # Progreso por conteo de archivos de salida (robusto entre versiones).
-    # Reservamos el último 5% para el reescalado final si hace falta.
+    # Reservamos el último tramo para el reescalado final si hace falta.
     ceiling = 0.94 if needs_resize else 0.99
-    while proc.poll() is None:
-        done = len(list(raw_dir.glob("*.png")))
-        if progress and total_frames > 0:
-            progress(min(ceiling, done / total_frames), f"Escalando frames ({done}/{total_frames})")
-        time.sleep(0.5)
+    with open(log_path, "w", encoding="utf-8", errors="replace") as logf:
+        proc = subprocess.Popen(cmd, stdout=logf, stderr=subprocess.STDOUT)
+        while proc.poll() is None:
+            done = len(list(raw_dir.glob("*.png")))
+            if progress and total_frames > 0:
+                shown = min(done, total_frames)  # nunca mostramos "28/24"
+                progress(min(ceiling, done / total_frames), f"Escalando frames ({shown}/{total_frames})")
+            time.sleep(0.5)
 
-    _, stderr = proc.communicate()
     done = len(list(raw_dir.glob("*.png")))
     if proc.returncode != 0 or done == 0:
-        raise EngineError(f"El upscaling con IA falló: {(stderr or '').strip()[-400:]}")
+        raise EngineError(f"El upscaling con IA falló: {_tail_file(log_path)}")
 
     if needs_resize:
         if progress:
             progress(0.96, f"Ajustando a {scale}×…")
-        _resize_frames_dir(raw_dir, out_dir, scale / native)
+        _resize_frames_dir(raw_dir, out_dir, scale / run_scale)
         import shutil as _sh
         _sh.rmtree(raw_dir, ignore_errors=True)
 
@@ -306,17 +321,30 @@ def interpolate_frames(
         binary, "-i", str(in_dir), "-o", str(out_dir), "-n", str(expected),
         "-g", str(config.REALESRGAN_GPU_ID),
     ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    while proc.poll() is None:
-        done = len(list(out_dir.glob("*.png")))
-        if progress and expected > 0:
-            progress(min(0.99, done / expected), f"Interpolando ({done}/{expected})")
-        time.sleep(0.5)
-    _, stderr = proc.communicate()
+    # Misma precaución que en el upscaling: salida a archivo para evitar deadlocks.
+    log_path = out_dir.parent / "rife.log"
+    with open(log_path, "w", encoding="utf-8", errors="replace") as logf:
+        proc = subprocess.Popen(cmd, stdout=logf, stderr=subprocess.STDOUT)
+        while proc.poll() is None:
+            done = len(list(out_dir.glob("*.png")))
+            if progress and expected > 0:
+                shown = min(done, expected)
+                progress(min(0.99, done / expected), f"Interpolando ({shown}/{expected})")
+            time.sleep(0.5)
     done = len(list(out_dir.glob("*.png")))
     if proc.returncode != 0 or done == 0:
-        raise EngineError(f"La interpolación falló: {(stderr or '').strip()[-400:]}")
+        raise EngineError(f"La interpolación falló: {_tail_file(log_path)}")
     return done
+
+
+def _tail_file(path: Path, n: int = 400) -> str:
+    """Devuelve el final del archivo de log (para mensajes de error legibles)."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return "(sin detalles)"
+    text = text.strip()
+    return text[-n:] if text else "(sin salida del proceso)"
 
 
 # --- Reensamblado ---------------------------------------------------------
