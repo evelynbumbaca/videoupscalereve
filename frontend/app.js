@@ -4,16 +4,40 @@
 const $ = (sel) => document.querySelector(sel);
 
 const state = {
+  mode: "video",        // "video" | "image"
+  jobMode: "video",     // modo con el que se envió el trabajo actual
   file: null,
   scale: 4,
   system: null,
   pollTimer: null,
   // Previsualización / marca de agua
   objectUrl: null,
-  wmBox: null,          // [x, y, w, h] en píxeles del video ORIGINAL
-  videoW: 0,
-  videoH: 0,
-  wmMethod: "fast",     // fast (difuminado) | ia (relleno LaMa)
+  wmBox: null,          // [x, y, w, h] en píxeles del archivo ORIGINAL
+  mediaW: 0,
+  mediaH: 0,
+  wmMethod: "fast",
+  _wmMedia: null,       // <video> o <img> con el frame a marcar
+};
+
+const MODE = {
+  video: {
+    accept: "video/*,.gif",
+    dzTitle: "Arrastrá tu video acá",
+    formats: "MP4 · MOV · MKV · WEBM · AVI · GIF",
+    endpoint: "/api/upload",
+    defaultModel: "animevideo",
+    modelHint: "Para clips generados con IA, el primero suele dar el mejor resultado.",
+    startText: "Mejorar video",
+  },
+  image: {
+    accept: "image/*",
+    dzTitle: "Arrastrá tu imagen acá",
+    formats: "PNG · JPG · WEBP · BMP · TIFF",
+    endpoint: "/api/upload-image",
+    defaultModel: "general",
+    modelHint: "Para fotos e imágenes realistas, 'Fotorrealista' suele ir mejor.",
+    startText: "Mejorar imagen",
+  },
 };
 
 // --- Detección del entorno ------------------------------------------------
@@ -59,6 +83,28 @@ function renderModeNote(sys) {
   }
 }
 
+// --- Cambio de modo (Video / Imagen) --------------------------------------
+$("#tabs").addEventListener("click", (e) => {
+  const tab = e.target.closest("button[data-mode]");
+  if (!tab || tab.dataset.mode === state.mode) return;
+  [...$("#tabs").children].forEach((b) => b.classList.remove("active"));
+  tab.classList.add("active");
+  setMode(tab.dataset.mode);
+});
+
+function setMode(mode) {
+  state.mode = mode;
+  const m = MODE[mode];
+  fileInput.setAttribute("accept", m.accept);
+  $("#dzTitle").textContent = m.dzTitle;
+  $("#dzFormats").textContent = m.formats;
+  $("#modelSelect").value = m.defaultModel;
+  $("#modelHint").textContent = m.modelHint;
+  $("#startBtn").textContent = m.startText;
+  $("#videoOnly").classList.toggle("hidden", mode !== "video"); // interpolar solo en video
+  clearFile();
+}
+
 // --- Selección de archivo -------------------------------------------------
 const dropzone = $("#dropzone");
 const fileInput = $("#fileInput");
@@ -87,7 +133,6 @@ function setFile(file) {
   $(".dz-inner").classList.add("hidden");
   $("#startBtn").disabled = false;
 
-  // Preparamos la previsualización para el marcado de la marca de agua.
   if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
   state.objectUrl = URL.createObjectURL(file);
   state.wmBox = null;
@@ -102,6 +147,7 @@ function clearFile() {
   $("#startBtn").disabled = true;
   if (state.objectUrl) { URL.revokeObjectURL(state.objectUrl); state.objectUrl = null; }
   state.wmBox = null;
+  state._wmMedia = null;
 }
 
 // --- Controles ------------------------------------------------------------
@@ -113,7 +159,6 @@ $("#scaleGroup").addEventListener("click", (e) => {
   state.scale = parseInt(btn.dataset.value, 10);
 });
 
-// --- Marca de agua: previsualización + dibujo del recuadro ----------------
 $("#removeWm").addEventListener("change", (e) => {
   $("#wmOptions").classList.toggle("hidden", !e.target.checked);
   if (e.target.checked) loadPreview();
@@ -125,7 +170,6 @@ $("#wmClear").addEventListener("click", () => {
   updateWmHint();
 });
 
-// Selector de método de borrado (rápido vs IA).
 $("#wmMethodGroup").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-value]");
   if (!btn || btn.disabled) return;
@@ -138,26 +182,20 @@ $("#wmMethodGroup").addEventListener("click", (e) => {
 function configureWmMethod(sys) {
   const iaBtn = $('#wmMethodGroup button[data-value="ia"]');
   if (!iaBtn) return;
-  if (!sys.ai_watermark) {
-    iaBtn.disabled = true;
-    iaBtn.title = "Complemento de IA no instalado";
-  } else {
-    iaBtn.disabled = false;
-    iaBtn.title = "";
-  }
+  iaBtn.disabled = !sys.ai_watermark;
+  iaBtn.title = sys.ai_watermark ? "" : "Complemento de IA no instalado";
   updateWmMethodHint();
 }
 
 function updateWmMethodHint() {
   const hint = $("#wmMethodHint");
   if (!hint) return;
-  const iaOk = state.system?.ai_watermark;
   if (state.wmMethod === "ia") {
     hint.textContent = "Relleno generativo con IA: mejor para pantallas grandes. Más lento.";
-  } else if (iaOk) {
+  } else if (state.system?.ai_watermark) {
     hint.textContent = "Difuminado rápido. Para máxima calidad, probá 'Relleno con IA'.";
   } else {
-    hint.textContent = "Difuminado rápido. El 'Relleno con IA' es un complemento opcional (ver README/guía).";
+    hint.textContent = "Difuminado rápido. El 'Relleno con IA' es un complemento opcional (ver guía).";
   }
 }
 
@@ -174,12 +212,12 @@ function updateWmHint() {
   }
 }
 
-// Carga un frame del video (a la mitad) en el canvas para poder marcar encima.
+// --- Previsualización (video o imagen) para marcar la marca de agua -------
 function loadPreview() {
   const overlay = $("#wmOverlay");
   const canvas = $("#wmCanvas");
   if (!state.objectUrl) {
-    overlay.textContent = "Elegí un video para ver la previsualización.";
+    overlay.textContent = "Elegí un archivo para ver la previsualización.";
     overlay.classList.remove("hidden");
     canvas.width = 0; canvas.height = 0;
     return;
@@ -187,61 +225,58 @@ function loadPreview() {
   overlay.textContent = "Cargando previsualización…";
   overlay.classList.remove("hidden");
 
-  const video = document.createElement("video");
-  video.muted = true;
-  video.preload = "auto";
-  video.src = state.objectUrl;
+  const isImage = state.mode === "image" || (state.file && state.file.type.startsWith("image"));
+  const onFail = () => { overlay.textContent = "No se pudo cargar la previsualización."; overlay.classList.remove("hidden"); };
 
-  const onFail = () => {
-    overlay.textContent = "No se pudo cargar la previsualización de este video.";
-    overlay.classList.remove("hidden");
-  };
-  video.addEventListener("error", onFail);
-
-  video.addEventListener("loadeddata", () => {
-    // Buscamos un frame representativo (la marca suele estar en todo el video).
-    try { video.currentTime = Math.min(0.5, (video.duration || 1) / 2); }
-    catch { video.currentTime = 0; }
-  });
-
-  video.addEventListener("seeked", () => {
-    state.videoW = video.videoWidth;
-    state.videoH = video.videoHeight;
-    if (!state.videoW || !state.videoH) return onFail();
-
-    // Ajustamos el canvas al ancho disponible del contenedor (máx. 600 px).
-    const stageW = Math.min(600, $("#wmStage").clientWidth || 600);
-    const dispW = Math.min(stageW, state.videoW);
-    const dispH = Math.round(dispW * state.videoH / state.videoW);
-    const canvas = $("#wmCanvas");
-    canvas.width = dispW;
-    canvas.height = dispH;
-    state._wmVideo = video;   // guardamos para poder redibujar
-    redrawPreview();
-    $("#wmOverlay").classList.add("hidden");
-    updateWmHint();
-  }, { once: false });
+  if (isImage) {
+    const img = new Image();
+    img.onload = () => { drawPreviewMedia(img, img.naturalWidth, img.naturalHeight); };
+    img.onerror = onFail;
+    img.src = state.objectUrl;
+  } else {
+    const video = document.createElement("video");
+    video.muted = true; video.preload = "auto"; video.src = state.objectUrl;
+    video.addEventListener("error", onFail);
+    video.addEventListener("loadeddata", () => {
+      try { video.currentTime = Math.min(0.5, (video.duration || 1) / 2); } catch { video.currentTime = 0; }
+    });
+    video.addEventListener("seeked", () => {
+      if (!video.videoWidth) return onFail();
+      drawPreviewMedia(video, video.videoWidth, video.videoHeight);
+    }, { once: true });
+  }
 }
 
-// Redibuja el frame + el recuadro actual (si hay).
+function drawPreviewMedia(media, w, h) {
+  state.mediaW = w; state.mediaH = h;
+  if (!w || !h) return;
+  const stageW = Math.min(600, $("#wmStage").clientWidth || 600);
+  const dispW = Math.min(stageW, w);
+  const canvas = $("#wmCanvas");
+  canvas.width = dispW;
+  canvas.height = Math.round(dispW * h / w);
+  state._wmMedia = media;
+  redrawPreview();
+  $("#wmOverlay").classList.add("hidden");
+  updateWmHint();
+}
+
 function redrawPreview() {
   const canvas = $("#wmCanvas");
-  const video = state._wmVideo;
-  if (!canvas || !video || !canvas.width) return;
+  const media = state._wmMedia;
+  if (!canvas || !media || !canvas.width) return;
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(media, 0, 0, canvas.width, canvas.height);
   if (state.wmBox) {
-    const s = canvas.width / state.videoW;   // original -> display
+    const s = canvas.width / state.mediaW;
     const [ox, oy, ow, oh] = state.wmBox;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "#6d5efc";
-    ctx.fillStyle = "rgba(109,94,252,0.2)";
+    ctx.lineWidth = 2; ctx.strokeStyle = "#6d5efc"; ctx.fillStyle = "rgba(109,94,252,0.2)";
     ctx.fillRect(ox * s, oy * s, ow * s, oh * s);
     ctx.strokeRect(ox * s, oy * s, ow * s, oh * s);
   }
 }
 
-// Dibujo del recuadro con el mouse (o el dedo).
+// Dibujo del recuadro con mouse / dedo.
 (function setupBoxDrawing() {
   const canvas = $("#wmCanvas");
   if (!canvas) return;
@@ -251,53 +286,36 @@ function redrawPreview() {
     const rect = canvas.getBoundingClientRect();
     const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
     const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-    // CSS px -> px del buffer del canvas
     return {
       x: Math.max(0, Math.min(canvas.width, cx * canvas.width / rect.width)),
       y: Math.max(0, Math.min(canvas.height, cy * canvas.height / rect.height)),
     };
   };
-
   const boxToOriginal = (x0, y0, x1, y1) => {
-    const s = state.videoW / canvas.width;   // display -> original
-    const x = Math.min(x0, x1) * s;
-    const y = Math.min(y0, y1) * s;
-    const w = Math.abs(x1 - x0) * s;
-    const h = Math.abs(y1 - y0) * s;
-    return [Math.round(x), Math.round(y), Math.round(w), Math.round(h)];
+    const s = state.mediaW / canvas.width;
+    return [
+      Math.round(Math.min(x0, x1) * s), Math.round(Math.min(y0, y1) * s),
+      Math.round(Math.abs(x1 - x0) * s), Math.round(Math.abs(y1 - y0) * s),
+    ];
   };
-
-  const start = (e) => {
-    if (!state._wmVideo) return;
-    e.preventDefault();
-    drawing = true;
-    const p = toDisplay(e);
-    startX = p.x; startY = p.y;
-  };
+  const start = (e) => { if (!state._wmMedia) return; e.preventDefault(); drawing = true; const p = toDisplay(e); startX = p.x; startY = p.y; };
   const move = (e) => {
-    if (!drawing) return;
-    e.preventDefault();
+    if (!drawing) return; e.preventDefault();
     const p = toDisplay(e);
-    // dibujamos en vivo
     redrawPreview();
     const ctx = canvas.getContext("2d");
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "#6d5efc";
-    ctx.fillStyle = "rgba(109,94,252,0.2)";
+    ctx.lineWidth = 2; ctx.strokeStyle = "#6d5efc"; ctx.fillStyle = "rgba(109,94,252,0.2)";
     ctx.fillRect(Math.min(startX, p.x), Math.min(startY, p.y), Math.abs(p.x - startX), Math.abs(p.y - startY));
     ctx.strokeRect(Math.min(startX, p.x), Math.min(startY, p.y), Math.abs(p.x - startX), Math.abs(p.y - startY));
   };
   const end = (e) => {
-    if (!drawing) return;
-    drawing = false;
+    if (!drawing) return; drawing = false;
     const p = toDisplay(e.changedTouches ? { touches: e.changedTouches } : e);
     const box = boxToOriginal(startX, startY, p.x, p.y);
-    // ignoramos recuadros diminutos (clicks accidentales)
     state.wmBox = (box[2] >= 4 && box[3] >= 4) ? box : null;
     redrawPreview();
     updateWmHint();
   };
-
   canvas.addEventListener("mousedown", start);
   window.addEventListener("mousemove", move);
   window.addEventListener("mouseup", end);
@@ -316,7 +334,6 @@ async function startJob() {
 
   const removeWm = $("#removeWm").checked;
   if (removeWm && !state.wmBox) {
-    // Pedimos que marquen la zona antes de continuar.
     const hint = $("#wmHint");
     hint.textContent = "Primero dibujá el recuadro sobre la marca de agua.";
     hint.style.color = "var(--err)";
@@ -324,29 +341,32 @@ async function startJob() {
     return;
   }
 
+  const m = MODE[state.mode];
+  state.jobMode = state.mode;
+
   const fd = new FormData();
   fd.append("file", state.file);
   fd.append("scale", String(state.scale));
   fd.append("model", $("#modelSelect").value);
   fd.append("use_ai", String(state.system?.mode === "ia"));
-  fd.append("interpolate", String($("#interpolate").checked));
-  fd.append("interp_factor", "2");
+  if (state.mode === "video") {
+    fd.append("interpolate", String($("#interpolate").checked));
+    fd.append("interp_factor", "2");
+  }
   fd.append("remove_watermark", String(removeWm));
   if (removeWm && state.wmBox) {
     const [x, y, w, h] = state.wmBox;
-    fd.append("wm_x", String(x));
-    fd.append("wm_y", String(y));
-    fd.append("wm_w", String(w));
-    fd.append("wm_h", String(h));
+    fd.append("wm_x", String(x)); fd.append("wm_y", String(y));
+    fd.append("wm_w", String(w)); fd.append("wm_h", String(h));
     fd.append("wm_method", state.wmMethod);
   }
 
   showProgress();
-  setProgress(0, "Subiendo", "Enviando el video…");
+  setProgress(0, "Subiendo", "Enviando el archivo…");
 
   let job;
   try {
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const res = await fetch(m.endpoint, { method: "POST", body: fd });
     job = await res.json();
     if (!res.ok) throw new Error(job.detail || "No se pudo iniciar el proceso.");
   } catch (e) {
@@ -362,16 +382,9 @@ function pollJob(id) {
       const res = await fetch(`/api/jobs/${id}`);
       const job = await res.json();
       if (!res.ok) throw new Error(job.detail || "Trabajo no encontrado.");
-
       setProgress(job.progress, job.stage, job.message);
-
-      if (job.status === "done") {
-        clearInterval(state.pollTimer);
-        showResult(job);
-      } else if (job.status === "error") {
-        clearInterval(state.pollTimer);
-        showError(job.error || job.message || "Error desconocido.");
-      }
+      if (job.status === "done") { clearInterval(state.pollTimer); showResult(job); }
+      else if (job.status === "error") { clearInterval(state.pollTimer); showError(job.error || job.message || "Error desconocido."); }
     } catch (e) {
       clearInterval(state.pollTimer);
       showError(e.message || String(e));
@@ -399,9 +412,16 @@ function setProgress(frac, stage, msg) {
 function showResult(job) {
   setProgress(1, "Completado", job.message || "");
   $("#progressTitle").textContent = "¡Listo! 🎉";
-  const box = $("#resultBox");
-  box.classList.remove("hidden");
-  $("#resultVideo").src = job.download_url;
+  $("#resultBox").classList.remove("hidden");
+
+  const vid = $("#resultVideo"), img = $("#resultImage");
+  if (state.jobMode === "image") {
+    vid.classList.add("hidden"); vid.removeAttribute("src");
+    img.classList.remove("hidden"); img.src = job.download_url;
+  } else {
+    img.classList.add("hidden"); img.removeAttribute("src");
+    vid.classList.remove("hidden"); vid.src = job.download_url;
+  }
   $("#downloadBtn").href = job.download_url;
 }
 
@@ -411,8 +431,7 @@ function showError(msg) {
   $("#progressCard").hidden = false;
   $("#progressTitle").textContent = "Se detuvo el proceso";
   $("#resultBox").classList.add("hidden");
-  const box = $("#errorBox");
-  box.classList.remove("hidden");
+  $("#errorBox").classList.remove("hidden");
   $("#errorMsg").textContent = msg;
 }
 

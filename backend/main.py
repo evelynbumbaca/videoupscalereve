@@ -77,8 +77,65 @@ async def upload(
         },
     )
 
-    # Guardamos la subida en disco por streaming (evita cargar todo en RAM).
     dest = config.UPLOADS_DIR / f"{job.id}{ext}"
+    await _save_upload(file, dest)
+    run_job_async(job, dest)
+    return JSONResponse(job.public(), status_code=202)
+
+
+@app.post("/api/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    scale: int = Form(4),
+    model: str = Form("general"),
+    use_ai: bool = Form(True),
+    remove_watermark: bool = Form(False),
+    wm_corner: str = Form("br"),
+    wm_size: str = Form("medium"),
+    wm_x: int = Form(0),
+    wm_y: int = Form(0),
+    wm_w: int = Form(0),
+    wm_h: int = Form(0),
+    wm_method: str = Form("fast"),
+) -> JSONResponse:
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in config.ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(400, f"Formato de imagen no soportado: {ext or '¿?'}. "
+                                 f"Permitidos: {', '.join(sorted(config.ALLOWED_IMAGE_EXTENSIONS))}")
+    if model not in MODELS:
+        model = "general"
+    if scale not in (2, 3, 4):
+        scale = 4
+    if wm_corner not in ("br", "bl", "tr", "tl"):
+        wm_corner = "br"
+    if wm_size not in ("small", "medium", "large"):
+        wm_size = "medium"
+    if wm_method not in ("fast", "ia"):
+        wm_method = "fast"
+
+    job = store.create(
+        filename=file.filename or "imagen",
+        options={
+            "kind": "image",
+            "scale": scale,
+            "model": model,
+            "use_ai": use_ai,
+            "remove_watermark": remove_watermark,
+            "wm_corner": wm_corner,
+            "wm_size": wm_size,
+            "wm_box": [max(0, wm_x), max(0, wm_y), max(0, wm_w), max(0, wm_h)],
+            "wm_method": wm_method,
+        },
+    )
+
+    dest = config.UPLOADS_DIR / f"{job.id}{ext}"
+    await _save_upload(file, dest)
+    run_job_async(job, dest)
+    return JSONResponse(job.public(), status_code=202)
+
+
+async def _save_upload(file: UploadFile, dest: Path) -> None:
+    """Guarda la subida en disco por streaming (evita cargar todo en RAM)."""
     size = 0
     max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
     try:
@@ -92,9 +149,6 @@ async def upload(
                 f.write(chunk)
     finally:
         await file.close()
-
-    run_job_async(job, dest)
-    return JSONResponse(job.public(), status_code=202)
 
 
 @app.get("/api/jobs/{job_id}")
@@ -118,7 +172,8 @@ def download(job_id: str) -> FileResponse:
     path = config.OUTPUTS_DIR / job.output_name
     if not path.exists():
         raise HTTPException(404, "El archivo de salida ya no está disponible.")
-    return FileResponse(path, media_type="video/mp4", filename=job.output_name)
+    media = "image/png" if path.suffix.lower() == ".png" else "video/mp4"
+    return FileResponse(path, media_type=media, filename=job.output_name)
 
 
 # --- Frontend estático ----------------------------------------------------

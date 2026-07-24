@@ -13,22 +13,28 @@
       <span class="logo">🎬</span>
       <div>
         <h1>ReVE Upscaler</h1>
-        <p class="tagline">Mejorá tus videos de IA a HD y más — 100% local</p>
+        <p class="tagline">Subí la calidad de tus videos e imágenes con IA — 100% local</p>
       </div>
     </div>
     <div id="systemBadge" class="badge badge-muted">Detectando entorno…</div>
   </header>
 
   <main class="layout">
+    <!-- Selector de modo -->
+    <nav class="tabs" id="tabs" role="tablist">
+      <button class="tab active" data-mode="video" role="tab">🎬 Video</button>
+      <button class="tab" data-mode="image" role="tab">🖼️ Imagen</button>
+    </nav>
+
     <!-- Panel de configuración -->
     <section class="card" id="setupCard">
       <div id="dropzone" class="dropzone">
         <input type="file" id="fileInput" accept="video/*,.gif" hidden />
         <div class="dz-inner">
           <div class="dz-icon">⬆️</div>
-          <p class="dz-title">Arrastrá tu video acá</p>
+          <p class="dz-title" id="dzTitle">Arrastrá tu video acá</p>
           <p class="dz-sub">o <button type="button" class="link" id="browseBtn">elegí un archivo</button></p>
-          <p class="dz-formats">MP4 · MOV · MKV · WEBM · AVI · GIF</p>
+          <p class="dz-formats" id="dzFormats">MP4 · MOV · MKV · WEBM · AVI · GIF</p>
         </div>
         <div id="fileChip" class="file-chip hidden">
           <span class="fc-name" id="fileName"></span>
@@ -53,10 +59,10 @@
             <option value="general">Fotorrealista general</option>
             <option value="anime">Ilustración / Anime</option>
           </select>
-          <p class="hint">Para clips generados con IA, el primero suele dar el mejor resultado.</p>
+          <p class="hint" id="modelHint">Para clips generados con IA, el primero suele dar el mejor resultado.</p>
         </div>
 
-        <div class="field switch-field">
+        <div class="field switch-field" id="videoOnly">
           <label class="switch">
             <input type="checkbox" id="interpolate" />
             <span class="slider"></span>
@@ -74,22 +80,21 @@
           </label>
           <div>
             <span class="switch-label">Quitar marca de agua</span>
-            <p class="hint">Borra un logo de una esquina (ej: la estrella de Veo/Gemini).</p>
+            <p class="hint">Borrá un logo (ej: la estrella de Veo/Gemini) marcando su zona exacta.</p>
           </div>
         </div>
 
         <div class="field wm-options hidden" id="wmOptions">
           <label>Marcá la zona de la marca de agua</label>
-          <p class="hint">Arrastrá con el mouse para dibujar un recuadro justo encima de la marca (por ejemplo, la estrellita). Cuanto más ajustado, mejor.</p>
+          <p class="hint">Arrastrá con el mouse para dibujar un recuadro justo encima de la marca. Cuanto más ajustado, mejor.</p>
           <div class="wm-stage" id="wmStage">
             <canvas id="wmCanvas"></canvas>
-            <div class="wm-overlay" id="wmOverlay">Elegí un video para ver la previsualización.</div>
+            <div class="wm-overlay" id="wmOverlay">Elegí un archivo para ver la previsualización.</div>
           </div>
           <div class="wm-actions">
             <button type="button" class="ghost-sm" id="wmClear">Borrar recuadro</button>
             <span class="hint" id="wmHint"></span>
           </div>
-
           <div class="wm-method">
             <label>Método de borrado</label>
             <div class="segmented" id="wmMethodGroup">
@@ -101,7 +106,7 @@
         </div>
       </div>
 
-      <button id="startBtn" class="primary" disabled>Mejorar video</button>
+      <button id="startBtn" class="primary" disabled>Mejorar</button>
       <p id="modeNote" class="mode-note"></p>
     </section>
 
@@ -118,8 +123,9 @@
       <p id="progressMsg" class="progress-msg"></p>
 
       <div id="resultBox" class="result-box hidden">
-        <video id="resultVideo" controls playsinline></video>
-        <a id="downloadBtn" class="primary" download>⬇️ Descargar video</a>
+        <video id="resultVideo" controls playsinline class="hidden"></video>
+        <img id="resultImage" class="hidden" alt="Resultado" />
+        <a id="downloadBtn" class="primary" download>⬇️ Descargar</a>
         <button id="againBtn" class="ghost">Procesar otro</button>
       </div>
 

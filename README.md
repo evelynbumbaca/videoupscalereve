@@ -16,7 +16,8 @@ cualquier GPU (NVIDIA, AMD, Intel o Apple) e incluso por CPU.
 
 ## ✨ Qué hace
 
-- Sube un video, elegí el aumento (**2× / 3× / 4×**) y el modelo, y descargá el resultado.
+- Dos modos en una interfaz limpia con pestañas: **🎬 Video** y **🖼️ Imagen**.
+- Sube un video o una imagen, elegí el aumento (**2× / 3× / 4×**) y el modelo, y descargá el resultado.
 - Modelos pensados para **video de IA / animación**, **fotorrealista** e **ilustración**.
 - **Quitar marca de agua** marcando la zona exacta sobre una previsualización. Dos
   modos: **rápido** (difuminado con `delogo`) o **relleno con IA** (modelo LaMa,

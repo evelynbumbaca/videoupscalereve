@@ -72,14 +72,16 @@ store = JobStore()
 
 # --- Ejecución en segundo plano ------------------------------------------
 def run_job_async(job: Job, input_path: Path) -> None:
-    """Lanza el pipeline del job en un hilo daemon."""
+    """Lanza el pipeline del job en un hilo daemon (video o imagen)."""
     # Import diferido para evitar ciclos de importación.
-    from .pipeline import process
+    from .pipeline import process, process_image
+
+    processor = process_image if job.options.get("kind") == "image" else process
 
     def _worker() -> None:
         try:
             job.status = "running"
-            output = process(job, input_path)
+            output = processor(job, input_path)
             job.output_name = output.name
             job.status = "done"
             job.stage = "Completado"

@@ -24,6 +24,7 @@ for _d in (TOOLS_DIR, UPLOADS_DIR, OUTPUTS_DIR, WORK_DIR):
 # Tamaño máximo de subida (MB). Los clips de IA suelen ser chicos.
 MAX_UPLOAD_MB = int(os.environ.get("REVE_MAX_UPLOAD_MB", "2048"))
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v", ".gif"}
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
 
 # Cuántos jobs terminados guardamos en memoria antes de olvidarlos.
 MAX_JOBS_IN_MEMORY = 50
