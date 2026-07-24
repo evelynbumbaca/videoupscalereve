@@ -13,6 +13,7 @@ const state = {
   wmBox: null,          // [x, y, w, h] en píxeles del video ORIGINAL
   videoW: 0,
   videoH: 0,
+  wmMethod: "fast",     // fast (difuminado) | ia (relleno LaMa)
 };
 
 // --- Detección del entorno ------------------------------------------------
@@ -23,6 +24,7 @@ async function loadSystem() {
     state.system = sys;
     renderSystemBadge(sys);
     renderModeNote(sys);
+    configureWmMethod(sys);
   } catch (e) {
     $("#systemBadge").textContent = "No se pudo conectar con el servidor";
     $("#systemBadge").className = "badge badge-warn";
@@ -122,6 +124,42 @@ $("#wmClear").addEventListener("click", () => {
   redrawPreview();
   updateWmHint();
 });
+
+// Selector de método de borrado (rápido vs IA).
+$("#wmMethodGroup").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-value]");
+  if (!btn || btn.disabled) return;
+  [...$("#wmMethodGroup").children].forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.wmMethod = btn.dataset.value;
+  updateWmMethodHint();
+});
+
+function configureWmMethod(sys) {
+  const iaBtn = $('#wmMethodGroup button[data-value="ia"]');
+  if (!iaBtn) return;
+  if (!sys.ai_watermark) {
+    iaBtn.disabled = true;
+    iaBtn.title = "Complemento de IA no instalado";
+  } else {
+    iaBtn.disabled = false;
+    iaBtn.title = "";
+  }
+  updateWmMethodHint();
+}
+
+function updateWmMethodHint() {
+  const hint = $("#wmMethodHint");
+  if (!hint) return;
+  const iaOk = state.system?.ai_watermark;
+  if (state.wmMethod === "ia") {
+    hint.textContent = "Relleno generativo con IA: mejor para pantallas grandes. Más lento.";
+  } else if (iaOk) {
+    hint.textContent = "Difuminado rápido. Para máxima calidad, probá 'Relleno con IA'.";
+  } else {
+    hint.textContent = "Difuminado rápido. El 'Relleno con IA' es un complemento opcional (ver README/guía).";
+  }
+}
 
 function updateWmHint() {
   const hint = $("#wmHint");
@@ -300,6 +338,7 @@ async function startJob() {
     fd.append("wm_y", String(y));
     fd.append("wm_w", String(w));
     fd.append("wm_h", String(h));
+    fd.append("wm_method", state.wmMethod);
   }
 
   showProgress();

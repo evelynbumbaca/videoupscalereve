@@ -21,9 +21,11 @@ app = FastAPI(title="ReVE Upscaler", version=__version__)
 
 @app.get("/api/system")
 def system() -> dict:
+    from .engine import lama_available
     report = hardware.system_report()
     report["models"] = list(MODELS.keys())
     report["version"] = __version__
+    report["ai_watermark"] = lama_available()  # complemento de relleno con IA
     return report
 
 
@@ -42,6 +44,7 @@ async def upload(
     wm_y: int = Form(0),
     wm_w: int = Form(0),
     wm_h: int = Form(0),
+    wm_method: str = Form("fast"),
 ) -> JSONResponse:
     ext = Path(file.filename or "").suffix.lower()
     if ext not in config.ALLOWED_EXTENSIONS:
@@ -55,6 +58,8 @@ async def upload(
         wm_corner = "br"
     if wm_size not in ("small", "medium", "large"):
         wm_size = "medium"
+    if wm_method not in ("fast", "ia"):
+        wm_method = "fast"
 
     job = store.create(
         filename=file.filename or "video",
@@ -68,6 +73,7 @@ async def upload(
             "wm_corner": wm_corner,
             "wm_size": wm_size,
             "wm_box": [max(0, wm_x), max(0, wm_y), max(0, wm_w), max(0, wm_h)],
+            "wm_method": wm_method,
         },
     )
 

@@ -76,6 +76,9 @@ con el Bloc de notas para verlo).
    Veo/Gemini), activá **"Quitar marca de agua"**: aparece una previsualización
    del video y **arrastrás con el mouse para dibujar un recuadro justo encima de
    la marca**. Cuanto más ajustado al logo, más limpio queda.
+   - **Método de borrado:** *Rápido* (difuminado) o *Relleno con IA*. Para videos
+     que vas a mostrar en **pantallas grandes**, conviene el **Relleno con IA**
+     (hay que instalarlo una vez — ver abajo).
 5. Apretá **"Mejorar video"** y mirá la barra de progreso.
 6. Cuando termina, **previsualizás** el resultado y lo **descargás**.
 
@@ -88,6 +91,21 @@ NVIDIA está lista. 👍
 
 Cerrá la **ventana negra** (la que dice "ReVE Upscaler"). Con eso se apaga todo.
 Para volver a usarla, doble clic de nuevo en `Iniciar ReVE Upscaler.bat`.
+
+---
+
+## 🪄 Activar el "Relleno con IA" para la marca de agua (opcional)
+
+El borrado *Rápido* difumina la zona; sirve, pero en **pantallas grandes** puede
+notarse. El **Relleno con IA** reconstruye la zona de forma inteligente y queda
+mucho más limpio. Es opcional porque descarga ~300-400 MB (una sola vez).
+
+Para instalarlo, doble clic en **`Instalar relleno IA (opcional).bat`** y esperá a
+que termine. Después, al usar "Quitar marca de agua", vas a poder elegir
+**"Relleno con IA"** en *Método de borrado*.
+
+> Corre en tu procesador (no hace falta GPU) y solo trabaja la zona de la marca,
+> así que no es tan lento. En fondos muy movidos puede haber un leve parpadeo.
 
 ---
 

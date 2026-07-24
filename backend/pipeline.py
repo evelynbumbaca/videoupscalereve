@@ -18,6 +18,7 @@ from .jobs import Job
 _STAGE_WEIGHTS = {
     "probe": 0.02,
     "extract": 0.08,
+    "inpaint": 0.30,
     "upscale": 0.60,
     "interpolate": 0.15,
     "assemble": 0.15,
@@ -35,6 +36,11 @@ def process(job: Job, input_path: Path) -> Path:
     wm_corner = opts.get("wm_corner", "br")
     wm_size = opts.get("wm_size", "medium")
     wm_box = opts.get("wm_box", [0, 0, 0, 0])
+    wm_method = opts.get("wm_method", "fast")  # fast (delogo) | ia (relleno LaMa)
+    bx, by, bw, bh = (list(wm_box) + [0, 0, 0, 0])[:4]
+    has_box = bw > 0 and bh > 0
+    # El relleno con IA requiere el complemento instalado y un recuadro marcado.
+    use_ia_wm = remove_wm and wm_method == "ia" and has_box and engine.lama_available()
 
     work = config.WORK_DIR / job.id
     frames_in = work / "in"
@@ -44,7 +50,10 @@ def process(job: Job, input_path: Path) -> Path:
     work.mkdir(parents=True, exist_ok=True)
 
     # Qué etapas correrán (para normalizar los pesos del progreso).
-    active = ["probe", "extract", "upscale"]
+    active = ["probe", "extract"]
+    if use_ia_wm:
+        active.append("inpaint")
+    active.append("upscale")
     if interpolate:
         active.append("interpolate")
     active.append("assemble")
@@ -70,21 +79,26 @@ def process(job: Job, input_path: Path) -> Path:
         cb(1.0, f"{info.width}x{info.height} · {info.fps:.2f} fps · {info.n_frames} frames")
         base["acc"] += w
 
-        # 2) Extracción de frames (+ quitar marca de agua si corresponde) + audio
+        # 2) Extracción de frames + audio.
+        # Si se quita la marca con el modo rápido (delogo), se aplica acá durante
+        # la extracción. Si es con IA (LaMa), se extrae limpio y se rellena aparte.
         wm_filter = None
-        if remove_wm:
-            bx, by, bw, bh = (wm_box + [0, 0, 0, 0])[:4]
-            if bw > 0 and bh > 0:
-                # Recuadro exacto marcado por el usuario en la previsualización.
+        if remove_wm and not use_ia_wm:
+            if has_box:
                 wm_filter = engine.delogo_filter_box(bx, by, bw, bh, info.width, info.height)
             else:
-                # Respaldo: esquina + tamaño.
                 wm_filter = engine.delogo_filter(wm_corner, wm_size, info.width, info.height)
-        extract_label = "Extrayendo frames y quitando marca" if remove_wm else "Extrayendo frames"
+        extract_label = "Extrayendo frames y quitando marca" if wm_filter else "Extrayendo frames"
         cb, w = stage_progress("extract", extract_label)
         n_frames = engine.extract_frames(input_path, frames_in, progress=cb, vf=wm_filter)
         has_audio = engine.extract_audio(input_path, audio_path) if info.has_audio else False
         base["acc"] += w
+
+        # 2.5) Relleno de marca de agua con IA (LaMa), antes del upscaling.
+        if use_ia_wm:
+            cb, w = stage_progress("inpaint", "Borrando marca con IA")
+            engine.inpaint_frames_lama(frames_in, (bx, by, bw, bh), n_frames, progress=cb)
+            base["acc"] += w
 
         # 3) Upscaling
         if use_ai:

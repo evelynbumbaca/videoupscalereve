@@ -49,6 +49,8 @@ FFMPEG = {
     "windows": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
     "ubuntu":  "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz",
 }
+# Modelo LaMa (relleno de marca de agua con IA). Complemento opcional.
+LAMA_URL = "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt"
 
 
 def _download(url: str, dest: Path) -> None:
@@ -113,18 +115,52 @@ def status() -> None:
     if util.find_spec("backend") is None:
         print("(Ejecutá esto desde la raíz del proyecto.)")
         return
-    from backend import hardware
+    from backend import hardware, engine
     rep = hardware.system_report()
     print("\nEstado de las herramientas:")
     for tool, ok in rep["tools"].items():
         print(f"  {'✅' if ok else '⬜'} {tool}")
+    ai_wm = engine.lama_available()
+    print(f"  {'✅' if ai_wm else '⬜'} relleno con IA (marca de agua)")
     print(f"\nModo actual de la app: {rep['mode']}")
     print(f"GPU detectada: {rep['gpu']['name']}\n")
+
+
+def install_ai_watermark() -> None:
+    """Instala el complemento opcional de relleno con IA: dependencias de
+    Python (torch, pillow, numpy) + el modelo LaMa (~200 MB)."""
+    import subprocess
+
+    print("• Complemento de relleno con IA (marca de agua)\n")
+    req = ROOT / "requirements-ai-watermark.txt"
+    print("[1/2] Instalando torch + pillow + numpy (puede tardar, ~300 MB)…")
+    rc = subprocess.call([sys.executable, "-m", "pip", "install", "-r", str(req)])
+    if rc != 0:
+        print("❌ Falló la instalación de dependencias. Revisá tu conexión.")
+        return
+
+    print("\n[2/2] Descargando el modelo LaMa (~200 MB)…")
+    lama_dir = TOOLS / "lama"
+    lama_dir.mkdir(parents=True, exist_ok=True)
+    dest = lama_dir / "big-lama.pt"
+    if dest.exists() and dest.stat().st_size > 1_000_000:
+        print("  ✅ El modelo ya estaba descargado.")
+    else:
+        try:
+            _download(LAMA_URL, dest)
+            print(f"  ✅ Modelo guardado en {dest}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ❌ Falló la descarga ({exc}).")
+            print(f"     Bajalo a mano desde:\n     {LAMA_URL}\n     y guardalo en: {dest}")
+            return
+    print("\n✅ Complemento de relleno con IA listo.")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Descarga los binarios de ReVE Upscaler.")
     ap.add_argument("--only", choices=["ffmpeg", "realesrgan", "rife"], help="instala solo un componente")
+    ap.add_argument("--ai-watermark", action="store_true",
+                    help="instala el complemento opcional de relleno con IA (torch + modelo LaMa)")
     ap.add_argument("--list", action="store_true", help="muestra el estado y sale")
     args = ap.parse_args()
 
@@ -132,6 +168,10 @@ def main() -> None:
 
     if args.list:
         status()
+        return
+
+    if args.ai_watermark:
+        install_ai_watermark()
         return
 
     plat = _plat()

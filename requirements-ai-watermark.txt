@@ -1,0 +1,6 @@
+# Complemento OPCIONAL: relleno de marca de agua con IA (modelo LaMa).
+# Es pesado (~300 MB) y solo hace falta si vas a usar "Relleno con IA".
+# En Windows, 'torch' instala la versión de CPU por defecto (sin CUDA).
+torch
+pillow
+numpy

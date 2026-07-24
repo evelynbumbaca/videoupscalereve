@@ -222,6 +222,100 @@ def delogo_filter(corner: str, size: str, width: int, height: int) -> str:
     return _delogo_str(x, y, w, h, width, height)
 
 
+# --- Quitar marca de agua con IA (relleno generativo, LaMa) ----------------
+_LAMA_MODEL = None  # se carga una sola vez
+
+
+def lama_available() -> bool:
+    """True si el complemento de IA (torch + modelo LaMa) está instalado."""
+    return config.torch_available() and config.lama_model_path() is not None
+
+
+def _load_lama():
+    global _LAMA_MODEL
+    if _LAMA_MODEL is None:
+        import torch
+        path = config.lama_model_path()
+        if not path:
+            raise EngineError("El modelo de IA para marca de agua no está instalado.")
+        model = torch.jit.load(path, map_location="cpu")
+        model.eval()
+        _LAMA_MODEL = model
+    return _LAMA_MODEL
+
+
+def inpaint_frames_lama(
+    frames_dir: Path,
+    box: tuple[int, int, int, int],
+    total_frames: int,
+    progress: ProgressCB | None = None,
+) -> None:
+    """Borra la marca de agua con relleno generativo (LaMa) en cada frame.
+
+    box = (x, y, w, h) en píxeles del frame original. Para ser rápido y no
+    tocar el resto de la imagen, procesa solo un recorte alrededor de la zona
+    y recompone únicamente los píxeles marcados (sin costuras afuera).
+    """
+    import numpy as np
+    import torch
+    from PIL import Image
+
+    model = _load_lama()
+    bx, by, bw, bh = (int(v) for v in box)
+
+    frames = sorted(frames_dir.glob("frame_*.png"))
+    if not frames:
+        raise EngineError("No hay frames para procesar.")
+
+    done = 0
+    for fp in frames:
+        img = Image.open(fp).convert("RGB")
+        W, H = img.size
+        arr = np.asarray(img).astype(np.float32)
+
+        # Recuadro de la marca, acotado al frame.
+        x0 = max(0, min(bx, W - 1)); y0 = max(0, min(by, H - 1))
+        x1 = max(x0 + 1, min(bx + bw, W)); y1 = max(y0 + 1, min(by + bh, H))
+
+        # Recorte con margen de contexto para que la IA tenga de dónde reconstruir.
+        margin = max(32, int(0.6 * max(x1 - x0, y1 - y0)))
+        cx0 = max(0, x0 - margin); cy0 = max(0, y0 - margin)
+        cx1 = min(W, x1 + margin); cy1 = min(H, y1 + margin)
+
+        crop = arr[cy0:cy1, cx0:cx1]
+        ch, cw = crop.shape[:2]
+
+        # Máscara del recorte: 1 donde está la marca.
+        m = np.zeros((ch, cw), np.float32)
+        m[(y0 - cy0):(y1 - cy0), (x0 - cx0):(x1 - cx0)] = 1.0
+
+        # LaMa requiere dimensiones múltiplo de 8: rellenamos y luego recortamos.
+        ph = (8 - ch % 8) % 8
+        pw = (8 - cw % 8) % 8
+        crop_p = np.pad(crop, ((0, ph), (0, pw), (0, 0)), mode="reflect") if (ph or pw) else crop
+        m_p = np.pad(m, ((0, ph), (0, pw)), mode="constant") if (ph or pw) else m
+
+        image_t = torch.from_numpy(crop_p.transpose(2, 0, 1)[None]).float() / 255.0
+        mask_t = torch.from_numpy(m_p[None, None]).float()
+        with torch.no_grad():
+            out = model(image_t, mask_t)
+        res = out[0].permute(1, 2, 0).cpu().numpy()
+        res = np.clip(res * 255.0, 0, 255)[:ch, :cw]
+
+        # Recompone: solo cambian los píxeles de la marca.
+        m3 = m[..., None]
+        composed = crop * (1.0 - m3) + res * m3
+        arr[cy0:cy1, cx0:cx1] = composed
+
+        Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).save(fp)
+        done += 1
+        if progress and total_frames > 0:
+            progress(min(0.99, done / total_frames), f"Rellenando con IA ({done}/{total_frames})")
+
+    if progress:
+        progress(1.0, f"{done} frames procesados con IA")
+
+
 # --- Upscaling con IA -----------------------------------------------------
 def upscale_frames_ai(
     in_dir: Path,

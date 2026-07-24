@@ -45,11 +45,13 @@ echo [3/3] Aplicando la actualizacion...
 xcopy "%SRC%\backend"  "backend"  /E /Y /I >nul
 xcopy "%SRC%\frontend" "frontend" /E /Y /I >nul
 xcopy "%SRC%\scripts"  "scripts"  /E /Y /I >nul
-copy /Y "%SRC%\run.py"            "run.py"            >nul
-copy /Y "%SRC%\requirements.txt"  "requirements.txt" >nul
-copy /Y "%SRC%\Iniciar ReVE Upscaler.bat" "Iniciar ReVE Upscaler.bat" >nul
-copy /Y "%SRC%\README.md"        "README.md"         >nul
-copy /Y "%SRC%\GUIA_WINDOWS.md"  "GUIA_WINDOWS.md"   >nul
+copy /Y "%SRC%\run.py"                       "run.py"                       >nul
+copy /Y "%SRC%\requirements.txt"             "requirements.txt"             >nul
+copy /Y "%SRC%\requirements-ai-watermark.txt" "requirements-ai-watermark.txt" >nul
+copy /Y "%SRC%\Iniciar ReVE Upscaler.bat"    "Iniciar ReVE Upscaler.bat"    >nul
+copy /Y "%SRC%\Instalar relleno IA (opcional).bat" "Instalar relleno IA (opcional).bat" >nul
+copy /Y "%SRC%\README.md"                    "README.md"                    >nul
+copy /Y "%SRC%\GUIA_WINDOWS.md"              "GUIA_WINDOWS.md"              >nul
 
 rmdir /s /q "%TMP%"
 

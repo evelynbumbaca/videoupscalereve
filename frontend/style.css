@@ -160,6 +160,9 @@ select:focus { outline: none; border-color: var(--accent); }
 }
 .wm-overlay.hidden { display: none; }
 .wm-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.wm-method { margin-top: 16px; }
+.wm-method label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.segmented button:disabled { opacity: 0.4; cursor: not-allowed; }
 .ghost-sm {
   background: none; color: var(--text-dim); border: 1px solid var(--border);
   border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer;

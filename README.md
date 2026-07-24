@@ -18,7 +18,9 @@ cualquier GPU (NVIDIA, AMD, Intel o Apple) e incluso por CPU.
 
 - Sube un video, elegí el aumento (**2× / 3× / 4×**) y el modelo, y descargá el resultado.
 - Modelos pensados para **video de IA / animación**, **fotorrealista** e **ilustración**.
-- **Quitar marca de agua** de una esquina (ej: la estrella de Veo/Gemini), con `delogo`.
+- **Quitar marca de agua** marcando la zona exacta sobre una previsualización. Dos
+  modos: **rápido** (difuminado con `delogo`) o **relleno con IA** (modelo LaMa,
+  reconstrucción inteligente, ideal para pantallas grandes — complemento opcional).
 - Opción de **suavizar el movimiento** interpolando frames (RIFE) para más fps.
 - Barra de progreso real (frame por frame) y previsualización del resultado.
 - **Modo respaldo**: si todavía no descargaste los modelos de IA, la app igual
@@ -90,6 +92,28 @@ python run.py
 Para forzar una GPU concreta usá `REVE_GPU_ID` (0 = la primera). `-1` fuerza CPU.
 
 ---
+
+## 🪄 Relleno de marca de agua con IA (complemento opcional)
+
+El modo **rápido** (`delogo`) reconstruye difuminando desde los bordes: sirve para
+logos chicos, pero en pantallas grandes puede notarse. El modo **relleno con IA**
+usa el modelo **LaMa** para reconstruir la zona de forma inteligente (mucho más
+limpio). Es un complemento **opcional** porque pesa (~300-400 MB: `torch` + modelo).
+
+Para instalarlo:
+
+```bash
+# opción A: script
+python scripts/setup_tools.py --ai-watermark
+
+# opción B (Windows): doble clic en
+#   "Instalar relleno IA (opcional).bat"
+```
+
+Luego, al quitar la marca de agua vas a poder elegir **"Relleno con IA"**.
+Corre en CPU (no necesita GPU) y procesa solo un recorte alrededor de la marca,
+así que es razonablemente rápido. En fondos muy movidos puede haber un leve
+parpadeo entre cuadros (limitación del relleno cuadro-a-cuadro).
 
 ## 🧠 Cómo funciona por dentro
 

@@ -91,3 +91,17 @@ def rife_path() -> str | None:
         ["rife-ncnn-vulkan", "rife-ncnn-vulkan.exe"],
         subfolders=["rife"],
     )
+
+
+def lama_model_path() -> str | None:
+    """Modelo LaMa (big-lama.pt) para el relleno de marca de agua con IA.
+    Es un complemento opcional que se instala aparte."""
+    for cand in (TOOLS_DIR / "lama" / "big-lama.pt", TOOLS_DIR / "big-lama.pt"):
+        if cand.is_file():
+            return str(cand)
+    return None
+
+
+def torch_available() -> bool:
+    import importlib.util
+    return importlib.util.find_spec("torch") is not None
