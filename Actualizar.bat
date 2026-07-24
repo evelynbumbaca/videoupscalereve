@@ -7,8 +7,8 @@ echo ============================================================
 echo            R e V E   U p s c a l e r  -  Actualizar
 echo ============================================================
 echo.
-echo Esto descarga la ultima version del codigo desde GitHub y la
-echo aplica SIN tocar tus modelos de IA ni el entorno ya instalado.
+echo Descarga la ultima version del codigo desde GitHub y la aplica
+echo SIN tocar tus modelos de IA ni el entorno ya instalado.
 echo.
 
 set "ZIPURL=https://github.com/evelynbumbaca/videoupscalereve/archive/refs/heads/claude/ai-video-upscale-tool-72g2m6.zip"
@@ -42,22 +42,16 @@ if not defined SRC (
 )
 
 echo [3/3] Aplicando la actualizacion...
-xcopy "%SRC%\backend"  "backend"  /E /Y /I >nul
-xcopy "%SRC%\frontend" "frontend" /E /Y /I >nul
-xcopy "%SRC%\scripts"  "scripts"  /E /Y /I >nul
-copy /Y "%SRC%\run.py"                       "run.py"                       >nul
-copy /Y "%SRC%\requirements.txt"             "requirements.txt"             >nul
-copy /Y "%SRC%\requirements-ai-watermark.txt" "requirements-ai-watermark.txt" >nul
-copy /Y "%SRC%\Iniciar ReVE Upscaler.bat"    "Iniciar ReVE Upscaler.bat"    >nul
-copy /Y "%SRC%\Instalar relleno IA (opcional).bat" "Instalar relleno IA (opcional).bat" >nul
-copy /Y "%SRC%\README.md"                    "README.md"                    >nul
-copy /Y "%SRC%\GUIA_WINDOWS.md"              "GUIA_WINDOWS.md"              >nul
+REM Copiamos TODO el codigo nuevo. Las carpetas tools\, uploads\, outputs\ y
+REM .venv\ no vienen en la descarga, asi que quedan intactas. /C continua si
+REM algun archivo esta en uso (por ejemplo, este mismo .bat mientras corre).
+xcopy "%SRC%\*" "." /E /Y /C /I >nul
 
 rmdir /s /q "%TMP%"
 
 echo.
 echo ============================================================
-echo  Listo! Ya tenes la ultima version.
+echo  Listo! Ya tenes la ultima version, con todos los archivos.
 echo  Cerra esta ventana y abri la app con "Iniciar ReVE Upscaler.bat".
 echo ============================================================
 pause

@@ -134,7 +134,12 @@ def install_ai_watermark() -> None:
     print("• Complemento de relleno con IA (marca de agua)\n")
     req = ROOT / "requirements-ai-watermark.txt"
     print("[1/2] Instalando torch + pillow + numpy (puede tardar, ~300 MB)…")
-    rc = subprocess.call([sys.executable, "-m", "pip", "install", "-r", str(req)])
+    # Si por algún motivo falta el archivo de requisitos, instalamos por nombre.
+    if req.exists():
+        pip_cmd = [sys.executable, "-m", "pip", "install", "-r", str(req)]
+    else:
+        pip_cmd = [sys.executable, "-m", "pip", "install", "torch", "pillow", "numpy"]
+    rc = subprocess.call(pip_cmd)
     if rc != 0:
         print("❌ Falló la instalación de dependencias. Revisá tu conexión.")
         return
