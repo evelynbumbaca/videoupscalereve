@@ -1,0 +1,46 @@
+@echo off
+chcp 65001 >nul
+title ReVE Upscaler - Crear portable
+cd /d "%~dp0"
+
+echo ============================================================
+echo      Generar version PORTABLE (para compartir con otros)
+echo ============================================================
+echo.
+echo Crea una carpeta con "ReVE Upscaler.exe" que tus companeros pueden
+echo usar SIN instalar Python ni nada: descomprimen y hacen doble clic.
+echo.
+echo Incluye ffmpeg y los modelos de upscaling que ya tengas descargados.
+echo (El relleno de marca de agua con IA NO se incluye por su gran tamano.)
+echo.
+pause
+
+if not exist ".venv\Scripts\python.exe" echo [!] Primero abri la app con "Iniciar ReVE Upscaler.bat" (crea el entorno) y ejecuta al menos una vez el setup. && echo. && pause && exit /b 1
+
+call ".venv\Scripts\activate.bat"
+
+echo [1/3] Instalando el empaquetador (PyInstaller)...
+python -m pip install -q pyinstaller
+if errorlevel 1 echo [!] No se pudo instalar PyInstaller. Revisa tu conexion. && pause && exit /b 1
+
+echo.
+echo [2/3] Generando el ejecutable (tarda unos minutos)...
+pyinstaller "packaging\reve.spec" --noconfirm
+if errorlevel 1 echo [!] Fallo la generacion del ejecutable. && pause && exit /b 1
+
+echo.
+echo [3/3] Copiando ffmpeg y modelos al portable...
+if exist "tools" xcopy "tools" "dist\ReVE Upscaler\tools" /E /I /Y >nul
+
+echo.
+echo ============================================================
+echo  LISTO! Tu portable esta en la carpeta:
+echo      dist\ReVE Upscaler\
+echo.
+echo  Para compartirlo:
+echo   1) Clic derecho sobre la carpeta "ReVE Upscaler" (dentro de dist)
+echo   2) "Enviar a" -^> "Carpeta comprimida (en zip)"
+echo   3) Manda ese .zip a tus companeros.
+echo  Ellos lo descomprimen y abren "ReVE Upscaler.exe". Listo.
+echo ============================================================
+pause

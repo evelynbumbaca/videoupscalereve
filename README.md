@@ -116,6 +116,29 @@ Corre en CPU (no necesita GPU) y procesa solo un recorte alrededor de la marca,
 así que es razonablemente rápido. En fondos muy movidos puede haber un leve
 parpadeo entre cuadros (limitación del relleno cuadro-a-cuadro).
 
+## 📦 Crear un portable para compartir (Windows)
+
+Podés generar una versión **portable**: una carpeta con `ReVE Upscaler.exe` que
+tus compañeros usan **sin instalar Python ni nada** (descomprimen y doble clic).
+
+```bash
+# opción A (Windows): doble clic en
+#   "Crear portable.bat"
+
+# opción B: manualmente
+pip install pyinstaller
+pyinstaller "packaging/reve.spec" --noconfirm
+# luego copiá la carpeta tools/ dentro de dist/ReVE Upscaler/ para incluir ffmpeg y modelos
+```
+
+El resultado queda en `dist/ReVE Upscaler/`. Comprimí esa carpeta en un `.zip` y
+compartila. Notas:
+- Incluye ffmpeg y los modelos de upscaling que ya tengas en `tools/`.
+- **No** incluye el complemento de relleno con IA (torch pesa demasiado); el
+  portable usa el borrado rápido de marca de agua.
+- Al ser un `.exe` sin firmar, Windows puede mostrar el aviso de SmartScreen
+  ("Más información" → "Ejecutar de todas formas").
+
 ## 🧠 Cómo funciona por dentro
 
 ```

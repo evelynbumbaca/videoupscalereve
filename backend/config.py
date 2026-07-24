@@ -7,15 +7,26 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 from pathlib import Path
 
 # --- Rutas base -----------------------------------------------------------
-ROOT = Path(__file__).resolve().parent.parent
+# Soporta dos escenarios:
+#  • Normal (código fuente): rutas relativas a la raíz del proyecto.
+#  • Empaquetado (PyInstaller / portable): los datos escribibles viven junto
+#    al .exe, y el frontend (solo lectura) viaja dentro del paquete.
+if getattr(sys, "frozen", False):
+    ROOT = Path(sys.executable).resolve().parent          # carpeta del .exe (escribible)
+    _BUNDLE = Path(getattr(sys, "_MEIPASS", ROOT))        # recursos empaquetados
+    FRONTEND_DIR = _BUNDLE / "frontend"
+else:
+    ROOT = Path(__file__).resolve().parent.parent
+    FRONTEND_DIR = ROOT / "frontend"
+
 TOOLS_DIR = ROOT / "tools"
 UPLOADS_DIR = ROOT / "uploads"
 OUTPUTS_DIR = ROOT / "outputs"
 WORK_DIR = ROOT / "work"          # frames temporales de cada job
-FRONTEND_DIR = ROOT / "frontend"
 
 for _d in (TOOLS_DIR, UPLOADS_DIR, OUTPUTS_DIR, WORK_DIR):
     _d.mkdir(parents=True, exist_ok=True)
