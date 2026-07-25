@@ -67,19 +67,36 @@ Todo ocurre **dentro de la carpeta de la aplicación**:
 No escribe fuera de esa carpeta, no toca el registro, no instala servicios ni
 tareas programadas, y no requiere privilegios de administrador.
 
-## Sobre la versión portable (si aplica)
+## Detecciones observadas
+
+En una estación con **Trend Micro Apex One** se registraron **dos** eventos al
+procesar un video de 10 segundos:
+
+1. **Behavior Monitoring** — "policy violation, blocked the offending process(es)".
+   Corresponde al patrón de creación/borrado masivo de temporales descrito arriba.
+   Efecto: el proceso de codificación fue terminado y la tarea quedó incompleta.
+
+2. **Virus/malware** — el **ejecutable de la aplicación fue puesto en cuarentena**.
+
+## Sobre el ejecutable (versión portable)
 
 La versión portable se empaqueta con **PyInstaller**. Los ejecutables generados
-con PyInstaller son un **falso positivo muy documentado**: como algunos malware
-también usan esa herramienta, varios motores marcan el *bootloader* por sí mismo.
-El empaquetado se hace sin compresión UPX y en modo carpeta (`onedir`), que son
-las configuraciones que menos detecciones generan.
+con esa herramienta son un **falso positivo ampliamente documentado**: como
+algunos malware también la usan, varios motores marcan el *bootloader* en sí
+mismo, con independencia del código que contiene.
 
-## Qué se solicita
+El empaquetado ya usa las opciones que menos detecciones generan: **sin
+compresión UPX** y en **modo carpeta (`onedir`)**.
 
-Si tras la revisión se considera aceptable, la solución habitual es una
-**exclusión de Behavior Monitoring para la carpeta de la aplicación**, que es
-donde ocurre toda la actividad descrita.
+## Remedios posibles, en orden de preferencia
+
+1. **Firma de código.** Si la organización dispone de un certificado de firma
+   para herramientas internas, firmar el ejecutable es la solución más limpia:
+   resuelve la detección del archivo y además elimina el aviso de SmartScreen.
+2. **Exclusión para la carpeta de la aplicación**, que cubre tanto el ejecutable
+   como la actividad de temporales (ambas detecciones ocurren allí).
+3. **Excepción solo del ejecutable** (por hash). Resuelve la cuarentena, pero
+   probablemente no la alerta de Behavior Monitoring.
 
 Quedamos a disposición para facilitar el código fuente, los hashes de los
 binarios o cualquier verificación adicional que necesiten.
