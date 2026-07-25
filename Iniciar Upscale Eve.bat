@@ -34,11 +34,9 @@ if not exist ".venv\Scripts\python.exe" (
     pause
     exit /b 1
   )
-  call ".venv\Scripts\activate.bat"
-
   echo [2/3] Instalando componentes del servidor...
-  python -m pip install --upgrade pip >nul
-  pip install -r requirements.txt
+  ".venv\Scripts\python.exe" -m pip install --upgrade pip >nul
+  ".venv\Scripts\python.exe" -m pip install -r requirements.txt
   if errorlevel 1 (
     echo [!] Fallo la instalacion de dependencias. Revisa tu conexion a internet.
     pause
@@ -48,19 +46,18 @@ if not exist ".venv\Scripts\python.exe" (
   echo.
   echo [3/3] Descargando los modelos de IA y ffmpeg...
   echo       (Real-ESRGAN + ffmpeg + RIFE. Puede tardar segun tu conexion.)
-  python scripts\setup_tools.py
+  ".venv\Scripts\python.exe" scripts\setup_tools.py
 
   echo.
   echo Instalacion completa.
   echo.
 ) else (
-  call ".venv\Scripts\activate.bat"
   REM Una actualizacion puede haber sumado dependencias nuevas. Si falta
   REM alguna, la instalamos ahora en vez de arrancar sin esa funcion.
-  python -c "import fastapi, uvicorn, onnxruntime, numpy, PIL" 2>nul
+  ".venv\Scripts\python.exe" -c "import fastapi, uvicorn, onnxruntime, numpy, PIL" 2>nul
   if errorlevel 1 (
     echo Faltan dependencias nuevas. Instalandolas...
-    python -m pip install -q -r requirements.txt
+    ".venv\Scripts\python.exe" -m pip install -q -r requirements.txt
     echo.
   )
 )
@@ -69,7 +66,7 @@ REM --- 3) Iniciar la aplicacion ---------------------------------------------
 echo Iniciando Upscale Eve...
 echo Se abrira solo en tu navegador. Para DETENER la app, cierra esta ventana.
 echo.
-python run.py
+".venv\Scripts\python.exe" run.py
 
 echo.
 echo La aplicacion se detuvo.

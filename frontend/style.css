@@ -102,8 +102,11 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.03em; font-weight: 800; }
   border: var(--line) solid var(--ink); border-radius: var(--r-md);
   transition: background 0.15s, transform 0.1s;
 }
-.tab:hover { background: var(--mint); }
+/* El hover NO debe pisar al elemento ya seleccionado: si lo hiciera, se pierde
+   la señal de "esto está activo" y el contraste del texto se degrada. */
+.tab:hover:not(.active) { background: var(--mint); }
 .tab.active { background: var(--lime); }
+.tab.active:hover { background: #BFE034; }   /* lima apenas más profundo */
 .tab:active { transform: translateY(1px); }
 
 /* ---------- Bento cards ---------- */
@@ -164,8 +167,11 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.03em; font-weight: 800; }
   border: var(--line) solid var(--ink); border-radius: var(--r-sm);
   transition: background 0.15s, transform 0.1s;
 }
-.segmented button:hover:not(:disabled) { background: var(--mint); }
+.segmented button:hover:not(:disabled):not(.active) { background: var(--mint); }
 .segmented button.active { background: var(--ink); color: var(--lime); }
+/* Al pasar el mouse por el botón YA seleccionado, mantenemos el fondo oscuro:
+   aclararlo dejaba el texto lima sobre menta, sin contraste legible. */
+.segmented button.active:hover:not(:disabled) { background: #262626; }
 .segmented button:active:not(:disabled) { transform: translateY(1px); }
 .segmented button:disabled { opacity: 0.4; cursor: not-allowed; }
 .segmented.compact button { font-size: 13px; padding: 10px 8px; letter-spacing: -0.01em; }
