@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Especificación de PyInstaller para el portable de ReVE Upscaler.
+"""Especificación de PyInstaller para el portable de Upscale Eve.
 
 Genera una carpeta autocontenida (onedir) con el .exe y todo lo necesario.
 Los binarios de ffmpeg/Real-ESRGAN y los datos (uploads/outputs) viven JUNTO
@@ -73,7 +73,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="ReVE Upscaler",
+    name="Upscale Eve",
     console=True,          # mostramos la ventana con la URL / errores
     icon=None,
 )
@@ -84,5 +84,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="ReVE Upscaler",
+    name="Upscale Eve",
 )

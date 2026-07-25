@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lanzador de ReVE Upscaler.
+"""Lanzador de Upscale Eve.
 
 Arranca el servidor local y abre el navegador. Si el puerto elegido está
 ocupado (por ejemplo, quedó una copia anterior abierta), busca uno libre
@@ -60,7 +60,7 @@ def main() -> None:
             webbrowser.open(url)
         threading.Thread(target=_open, daemon=True).start()
 
-    print(f"\n  ReVE Upscaler → {url}\n  (Ctrl+C para detener)\n")
+    print(f"\n  Upscale Eve → {url}\n  (Ctrl+C para detener)\n")
     import uvicorn
     uvicorn.run("backend.main:app", host=args.host, port=port, log_level="info")
 

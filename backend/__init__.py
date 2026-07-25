@@ -1,3 +1,3 @@
-"""ReVE Upscaler — backend package."""
+"""Upscale Eve — backend package."""
 
 __version__ = "0.1.0"

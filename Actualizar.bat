@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title ReVE Upscaler - Actualizar
+title Upscale Eve - Actualizar
 cd /d "%~dp0"
 
 echo ============================================================
-echo            R e V E   U p s c a l e r  -  Actualizar
+echo            U p s c a l e   E v e  -  Actualizar
 echo ============================================================
 echo.
 echo Descarga la ultima version del codigo desde GitHub y la aplica
@@ -15,6 +15,9 @@ set "ZIPURL=https://github.com/evelynbumbaca/videoupscalereve/archive/refs/heads
 set "TMP=%TEMP%\reve_update"
 
 if exist "%TMP%" rmdir /s /q "%TMP%"
+
+REM La app se llama ahora "Upscale Eve": quitamos el lanzador con el nombre viejo.
+if exist "Iniciar ReVE Upscaler.bat" del /q "Iniciar ReVE Upscaler.bat"
 mkdir "%TMP%"
 
 echo [1/3] Descargando...
@@ -61,6 +64,6 @@ if exist ".venv\Scripts\python.exe" (
 echo.
 echo ============================================================
 echo  Listo! Ya tenes la ultima version, con todos los archivos.
-echo  Cerra esta ventana y abri la app con "Iniciar ReVE Upscaler.bat".
+echo  Cerra esta ventana y abri la app con "Iniciar Upscale Eve.bat".
 echo ============================================================
 pause

@@ -1,4 +1,4 @@
-// ReVE Upscaler — lógica del frontend (sin dependencias).
+// Upscale Eve — lógica del frontend (sin dependencias).
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
@@ -73,11 +73,11 @@ function renderSystemBadge(sys) {
 function renderModeNote(sys) {
   const note = $("#modeNote");
   if (sys.mode === "none") {
-    note.textContent = "⚠️ ffmpeg no está instalado. Ejecutá: python scripts/setup_tools.py";
+    note.textContent = "Falta ffmpeg. Ejecutá: python scripts/setup_tools.py";
   } else if (sys.mode === "fallback") {
-    note.textContent = "ℹ️ Los modelos de IA no están instalados: se usará escalado de respaldo (ffmpeg).";
+    note.textContent = "Los modelos de IA no están instalados: se usará escalado de respaldo.";
   } else if (!sys.gpu?.accelerated) {
-    note.textContent = "ℹ️ Sin GPU acelerada detectada: el proceso puede ser lento.";
+    note.textContent = "Sin GPU acelerada detectada: el proceso puede ser lento.";
   } else {
     note.textContent = "";
   }
@@ -207,8 +207,8 @@ function updateWmHint() {
   if (!hint) return;
   if (state.wmBox) {
     const [, , w, h] = state.wmBox;
-    hint.textContent = `Zona marcada: ${Math.round(w)}×${Math.round(h)} px ✓`;
-    hint.style.color = "var(--ok)";
+    hint.textContent = `Zona marcada: ${Math.round(w)}×${Math.round(h)} px`;
+    hint.style.color = "var(--ink)";
   } else {
     hint.textContent = "Dibujá el recuadro sobre la marca.";
     hint.style.color = "";
@@ -401,20 +401,18 @@ function showProgress() {
   $("#progressCard").hidden = false;
   $("#resultBox").classList.add("hidden");
   $("#errorBox").classList.add("hidden");
-  $("#progressTitle").textContent = "Procesando…";
 }
 
 function setProgress(frac, stage, msg) {
   const pct = Math.round((frac || 0) * 100);
   $("#progressBar").style.width = pct + "%";
-  $("#progressPct").textContent = pct + "%";
+  $("#progressPct").textContent = pct;
   $("#progressStage").textContent = stage || "";
   $("#progressMsg").textContent = msg || "";
 }
 
 function showResult(job) {
   setProgress(1, "Completado", job.message || "");
-  $("#progressTitle").textContent = "¡Listo! 🎉";
   $("#resultBox").classList.remove("hidden");
 
   const vid = $("#resultVideo"), img = $("#resultImage");
@@ -426,13 +424,13 @@ function showResult(job) {
     vid.classList.remove("hidden"); vid.src = job.download_url;
   }
   $("#downloadBtn").href = job.download_url;
+  $("#downloadBtn").textContent = state.jobMode === "image" ? "Descargar imagen" : "Descargar video";
 }
 
 function showError(msg) {
   clearInterval(state.pollTimer);
   $("#setupCard").hidden = true;
   $("#progressCard").hidden = false;
-  $("#progressTitle").textContent = "Se detuvo el proceso";
   $("#resultBox").classList.add("hidden");
   $("#errorBox").classList.remove("hidden");
   $("#errorMsg").textContent = msg;

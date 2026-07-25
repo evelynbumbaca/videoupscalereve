@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title ReVE Upscaler - Instalar relleno con IA
+title Upscale Eve - Instalar relleno con IA
 cd /d "%~dp0"
 
 echo ============================================================
@@ -14,7 +14,7 @@ echo Descarga ~300-400 MB (torch + el modelo). Es de una sola vez y puede
 echo tardar VARIOS MINUTOS. No cierres la ventana aunque parezca detenida.
 echo.
 
-if not exist ".venv\Scripts\python.exe" echo [!] No encontre el entorno (.venv) en esta carpeta. Corre este archivo en la MISMA carpeta donde abris la app con "Iniciar ReVE Upscaler.bat" (y abri la app al menos una vez antes). && echo. && pause && exit /b 1
+if not exist ".venv\Scripts\python.exe" echo [!] No encontre el entorno (.venv) en esta carpeta. Corre este archivo en la MISMA carpeta donde abris la app con "Iniciar Upscale Eve.bat" (y abri la app al menos una vez antes). && echo. && pause && exit /b 1
 
 echo Instalando... (vas a ver el progreso de la descarga aca abajo)
 echo.

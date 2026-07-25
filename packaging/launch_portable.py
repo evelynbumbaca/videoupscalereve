@@ -40,7 +40,7 @@ def main() -> None:
 
     threading.Thread(target=_open, daemon=True).start()
 
-    print(f"\n  ReVE Upscaler -> {url}")
+    print(f"\n  Upscale Eve -> {url}")
     print("  (Cerra esta ventana para detener la app)\n")
     uvicorn.run(app, host=host, port=port, log_level="warning")
 

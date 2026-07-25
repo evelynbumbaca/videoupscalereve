@@ -1,21 +1,21 @@
 @echo off
 chcp 65001 >nul
-title ReVE Upscaler - Crear portable
+title Upscale Eve - Crear portable
 cd /d "%~dp0"
 
 echo ============================================================
 echo      Generar version PORTABLE (para compartir con otros)
 echo ============================================================
 echo.
-echo Crea una carpeta con "ReVE Upscaler.exe" que tus companeros pueden
+echo Crea una carpeta con "Upscale Eve.exe" que tus companeros pueden
 echo usar SIN instalar Python ni nada: descomprimen y hacen doble clic.
 echo.
 echo Incluye ffmpeg y los modelos de upscaling que ya tengas descargados.
-echo (El relleno de marca de agua con IA NO se incluye por su gran tamano.)
+echo Incluye tambien el borrado de marca de agua con IA (motor liviano).
 echo.
 pause
 
-if not exist ".venv\Scripts\python.exe" echo [!] Primero abri la app con "Iniciar ReVE Upscaler.bat" (crea el entorno) y ejecuta al menos una vez el setup. && echo. && pause && exit /b 1
+if not exist ".venv\Scripts\python.exe" echo [!] Primero abri la app con "Iniciar Upscale Eve.bat" (crea el entorno) y ejecuta al menos una vez el setup. && echo. && pause && exit /b 1
 
 call ".venv\Scripts\activate.bat"
 
@@ -43,7 +43,7 @@ REM  - ffmpeg/ffprobe (no ffplay: es un reproductor que la app no usa, ~130 MB)
 REM  - modelos de upscaling (realesrgan, rife)
 REM  - NO copiamos tools\lama (el modelo LaMa pesa ~200 MB y necesita torch,
 REM    que el portable no lleva; usa MI-GAN, que ya viene incluido)
-set "DEST=dist\ReVE Upscaler\tools"
+set "DEST=dist\Upscale Eve\tools"
 mkdir "%DEST%" 2>nul
 
 if exist "tools\ffmpeg" (
@@ -66,12 +66,12 @@ if exist "build" rmdir /s /q "build"
 echo.
 echo ============================================================
 echo  LISTO! Tu portable esta en la carpeta:
-echo      dist\ReVE Upscaler\
+echo      dist\Upscale Eve\
 echo.
 echo  Para compartirlo:
-echo   1) Clic derecho sobre la carpeta "ReVE Upscaler" (dentro de dist)
+echo   1) Clic derecho sobre la carpeta "Upscale Eve" (dentro de dist)
 echo   2) "Enviar a" -^> "Carpeta comprimida (en zip)"
 echo   3) Manda ese .zip a tus companeros.
-echo  Ellos lo descomprimen y abren "ReVE Upscaler.exe". Listo.
+echo  Ellos lo descomprimen y abren "Upscale Eve.exe". Listo.
 echo ============================================================
 pause

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Upscale Eve">
+  <!-- Placa base: color plano + outline negro (lenguaje flat de la marca) -->
+  <rect x="3" y="3" width="58" height="58" rx="16" fill="#CDEB45" stroke="#0A0A0A" stroke-width="4"/>
+  <!-- Origen: baja resolución -->
+  <rect x="12" y="36" width="16" height="16" rx="4" fill="#F9CFE4" stroke="#0A0A0A" stroke-width="3.5"/>
+  <!-- Destino: alta resolución -->
+  <rect x="30" y="12" width="22" height="22" rx="5" fill="#4EA8F5" stroke="#0A0A0A" stroke-width="3.5"/>
+  <!-- La escala: el salto de uno al otro -->
+  <path d="M28 44 L40 34" stroke="#0A0A0A" stroke-width="4" stroke-linecap="round"/>
+</svg>

@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title ReVE Upscaler
+title Upscale Eve
 cd /d "%~dp0"
 
 echo ============================================================
-echo                    R e V E   U p s c a l e r
+echo                    U p s c a l e   E v e
 echo ============================================================
 echo.
 
@@ -66,7 +66,7 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 REM --- 3) Iniciar la aplicacion ---------------------------------------------
-echo Iniciando ReVE Upscaler...
+echo Iniciando Upscale Eve...
 echo Se abrira solo en tu navegador. Para DETENER la app, cierra esta ventana.
 echo.
 python run.py

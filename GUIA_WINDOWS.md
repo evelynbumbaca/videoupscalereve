@@ -1,6 +1,6 @@
-# 🪟 Guía fácil para Windows (paso a paso)
+# Guía fácil para Windows — Upscale Eve
 
-Esta guía es para instalar y usar **ReVE Upscaler** aunque nunca hayas hecho algo así.
+Esta guía es para instalar y usar **Upscale Eve** aunque nunca hayas hecho algo así.
 Son 3 partes. Tranqui, se hace una sola vez.
 
 ---
@@ -35,7 +35,7 @@ El código está en **tu** repositorio de GitHub. Hay dos formas; la **A es la m
 2. Se descarga un `.zip`. Buscalo en tu carpeta **Descargas**.
 3. Hacé **clic derecho** sobre el `.zip` → **"Extraer todo…"** → **"Extraer"**.
 4. Se crea una carpeta (nombre largo tipo `videoupscalereve-claude-...`). Abrila.
-   Para que sea más cómodo, podés **renombrarla** a algo simple como `ReVE` y moverla
+   Para que sea más cómodo, podés **renombrarla** a algo simple como `Upscale Eve` y moverla
    a tu **Escritorio**.
 
 ### Opción B — Con Git (si ya sabés usarlo)
@@ -51,7 +51,7 @@ git checkout claude/ai-video-upscale-tool-72g2m6
 ## Parte 3 — Abrir la app (¡doble clic!)
 
 1. Entrá a la carpeta que descargaste.
-2. Buscá el archivo **`Iniciar ReVE Upscaler.bat`** y hacele **doble clic**.
+2. Buscá el archivo **`Iniciar Upscale Eve.bat`** y hacele **doble clic**.
 3. La **primera vez** se va a abrir una ventana negra que instala todo solo
    (Python, los modelos de IA, ffmpeg). **Tarda unos minutos, es normal.** No la cierres.
 4. Cuando termina, **se abre solo tu navegador** con la app lista para usar. 🎉
@@ -78,7 +78,7 @@ con el Bloc de notas para verlo).
    la marca**. Cuanto más ajustado al logo, más limpio queda.
    - **Método de borrado:** *Rápido* (difuminado) o *Relleno con IA*. Para videos
      que vas a mostrar en **pantallas grandes**, conviene el **Relleno con IA**
-     (hay que instalarlo una vez — ver abajo).
+     (ya viene incluido, no hay que instalar nada).
 5. Apretá **"Mejorar video"** y mirá la barra de progreso.
 6. Cuando termina, **previsualizás** el resultado y lo **descargás**.
 
@@ -89,20 +89,18 @@ NVIDIA está lista. 👍
 
 ## ⏹️ Cómo detener la app
 
-Cerrá la **ventana negra** (la que dice "ReVE Upscaler"). Con eso se apaga todo.
-Para volver a usarla, doble clic de nuevo en `Iniciar ReVE Upscaler.bat`.
+Cerrá la **ventana negra** (la que dice "Upscale Eve"). Con eso se apaga todo.
+Para volver a usarla, doble clic de nuevo en `Iniciar Upscale Eve.bat`.
 
 ---
 
 ## 🪄 Activar el "Relleno con IA" para la marca de agua (opcional)
 
-El borrado *Rápido* difumina la zona; sirve, pero en **pantallas grandes** puede
-notarse. El **Relleno con IA** reconstruye la zona de forma inteligente y queda
-mucho más limpio. Es opcional porque descarga ~300-400 MB (una sola vez).
+El **Relleno con IA** ya viene incluido: no hay que instalar nada. Este paso es
+solo si querés además el motor de **máxima calidad** (un poco más prolijo en
+fondos complejos), que pesa bastante más.
 
-Para instalarlo, doble clic en **`Instalar relleno IA (opcional).bat`** y esperá a
-que termine. Después, al usar "Quitar marca de agua", vas a poder elegir
-**"Relleno con IA"** en *Método de borrado*.
+Doble clic en **`Instalar relleno IA (opcional).bat`** y esperá a que termine.
 
 > Corre en tu procesador (no hace falta GPU) y solo trabaja la zona de la marca,
 > así que no es tan lento. En fondos muy movidos puede haber un leve parpadeo.
@@ -116,7 +114,7 @@ modelos de IA**. Solo:
 
 1. Doble clic en **`Actualizar.bat`**.
 2. Se baja e instala la última versión del código automáticamente (unos segundos).
-3. Cuando termina, cerrá esa ventana y abrí la app con `Iniciar ReVE Upscaler.bat`.
+3. Cuando termina, cerrá esa ventana y abrí la app con `Iniciar Upscale Eve.bat`.
 
 Tus modelos de IA, tu entorno y tus videos quedan intactos.
 
@@ -145,7 +143,7 @@ deja elegir:
 | Qué ves | Qué hacer |
 |---|---|
 | "No se encontro Python" | Volvé a la **Parte 1** y asegurate de marcar **"Add python.exe to PATH"**. |
-| El cartelito dice "Modo respaldo" | Los modelos de IA no se bajaron. Abrí la carpeta y doble clic en `Iniciar ReVE Upscaler.bat` de nuevo, o corré `python scripts\setup_tools.py`. |
+| El cartelito dice "Modo respaldo" | Los modelos de IA no se bajaron. Abrí la carpeta y doble clic en `Iniciar Upscale Eve.bat` de nuevo, o corré `python scripts\setup_tools.py`. |
 | Error de memoria (out of memory) | Tu placa tiene 4 GB. Ver el README, sección "VRAM y tile": se baja con una línea. |
 | Va lento | Probá **2×** en vez de 4×, y usá clips cortos. |
 

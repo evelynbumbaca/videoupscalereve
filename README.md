@@ -1,4 +1,4 @@
-# 🎬 ReVE Upscaler
+# Upscale Eve
 
 Herramienta local para hacer **upscale de videos** (especialmente los generados con IA)
 y llevarlos de calidad media/baja a **HD, 2K o 4K** — con una interfaz web limpia y
@@ -120,7 +120,7 @@ entre cuadros (limitación del relleno cuadro-a-cuadro).
 
 ## 📦 Crear un portable para compartir (Windows)
 
-Podés generar una versión **portable**: una carpeta con `ReVE Upscaler.exe` que
+Podés generar una versión **portable**: una carpeta con `Upscale Eve.exe` que
 tus compañeros usan **sin instalar Python ni nada** (descomprimen y doble clic).
 
 ```bash
@@ -130,10 +130,10 @@ tus compañeros usan **sin instalar Python ni nada** (descomprimen y doble clic)
 # opción B: manualmente
 pip install pyinstaller
 pyinstaller "packaging/reve.spec" --noconfirm
-# luego copiá la carpeta tools/ dentro de dist/ReVE Upscaler/ para incluir ffmpeg y modelos
+# luego copiá la carpeta tools/ dentro de dist/Upscale Eve/ para incluir ffmpeg y modelos
 ```
 
-El resultado queda en `dist/ReVE Upscaler/`. Comprimí esa carpeta en un `.zip` y
+El resultado queda en `dist/Upscale Eve/`. Comprimí esa carpeta en un `.zip` y
 compartila.
 
 > 💡 Antes de generarlo, corré `python scripts/setup_tools.py --slim` (u opción 4

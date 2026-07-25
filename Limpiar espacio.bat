@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title ReVE Upscaler - Limpiar espacio
+title Upscale Eve - Limpiar espacio
 cd /d "%~dp0"
 
 echo ============================================================
-echo             Limpiar espacio de ReVE Upscaler
+echo             Limpiar espacio de Upscale Eve
 echo ============================================================
 echo.
 echo Carpeta: %CD%
@@ -83,7 +83,7 @@ echo.
 echo ============================================================
 echo  Listo! Espacio liberado.
 echo  La app sigue funcionando: abrila con
-echo  "Iniciar ReVE Upscaler.bat".
+echo  "Iniciar Upscale Eve.bat".
 echo ============================================================
 goto :fin
 

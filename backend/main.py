@@ -1,4 +1,4 @@
-"""Servidor web de ReVE Upscaler.
+"""Servidor web de Upscale Eve.
 
 Expone una API mínima y sirve la interfaz estática. Todo corre en local:
 los videos nunca salen de tu máquina.
@@ -16,7 +16,7 @@ from . import __version__, config, hardware
 from .engine import MODELS
 from .jobs import run_job_async, store
 
-app = FastAPI(title="ReVE Upscaler", version=__version__)
+app = FastAPI(title="Upscale Eve", version=__version__)
 
 # Al arrancar no hay trabajos en curso: lo que quedó en work/ y uploads/ es
 # basura de ejecuciones cortadas (ventana cerrada a mitad de un proceso).

@@ -200,7 +200,7 @@ def slim_tools() -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Descarga los binarios de ReVE Upscaler.")
+    ap = argparse.ArgumentParser(description="Descarga los binarios de Upscale Eve.")
     ap.add_argument("--only", choices=["ffmpeg", "realesrgan", "rife"], help="instala solo un componente")
     ap.add_argument("--ai-watermark", action="store_true",
                     help="instala el complemento opcional de relleno con IA (torch + modelo LaMa)")

@@ -3,102 +3,111 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReVE Upscaler</title>
+  <title>Upscale Eve</title>
   <link rel="stylesheet" href="/static/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>" />
+  <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <span class="logo">🎬</span>
+      <img class="brand-logo" src="/static/logo.svg" alt="" />
       <div>
-        <h1>ReVE Upscaler</h1>
-        <p class="tagline">Subí la calidad de tus videos e imágenes con IA — 100% local</p>
+        <h1>Upscale <em>Eve</em></h1>
+        <p class="tagline">Más resolución con IA · 100% en tu equipo</p>
       </div>
     </div>
-    <div id="systemBadge" class="badge badge-muted">Detectando entorno…</div>
+    <div id="systemBadge" class="badge badge-muted">Detectando…</div>
   </header>
 
   <main class="layout">
-    <!-- Selector de modo -->
+    <!-- Modo -->
     <nav class="tabs" id="tabs" role="tablist">
-      <button class="tab active" data-mode="video" role="tab">🎬 Video</button>
-      <button class="tab" data-mode="image" role="tab">🖼️ Imagen</button>
+      <button class="tab active" data-mode="video" role="tab">Video</button>
+      <button class="tab" data-mode="image" role="tab">Imagen</button>
     </nav>
 
-    <!-- Panel de configuración -->
-    <section class="card" id="setupCard">
+    <!-- Configuración -->
+    <section id="setupCard">
+      <!-- Archivo -->
       <div id="dropzone" class="dropzone">
         <input type="file" id="fileInput" accept="video/*,.gif" hidden />
         <div class="dz-inner">
-          <div class="dz-icon">⬆️</div>
+          <img class="dz-icon" src="/static/logo.svg" alt="" />
           <p class="dz-title" id="dzTitle">Arrastrá tu video acá</p>
           <p class="dz-sub">o <button type="button" class="link" id="browseBtn">elegí un archivo</button></p>
           <p class="dz-formats" id="dzFormats">MP4 · MOV · MKV · WEBM · AVI · GIF</p>
         </div>
         <div id="fileChip" class="file-chip hidden">
           <span class="fc-name" id="fileName"></span>
-          <button type="button" class="fc-remove" id="removeFile" aria-label="Quitar">✕</button>
+          <button type="button" class="fc-remove" id="removeFile" aria-label="Quitar archivo">✕</button>
         </div>
       </div>
 
-      <div class="controls">
-        <div class="field">
-          <label>Aumento de resolución</label>
-          <div class="segmented" id="scaleGroup">
-            <button data-value="2" type="button">2×</button>
-            <button data-value="3" type="button">3×</button>
-            <button data-value="4" type="button" class="active">4×</button>
-          </div>
+      <!-- Resolución -->
+      <div class="card card-lime" style="margin-top:var(--gap)">
+        <div class="card-head"><span class="label">Aumento de resolución</span></div>
+        <div class="segmented" id="scaleGroup">
+          <button data-value="2" type="button">2×</button>
+          <button data-value="3" type="button">3×</button>
+          <button data-value="4" type="button" class="active">4×</button>
         </div>
+        <p class="hint">Empezá con 2× para ver el resultado rápido. 4× da el máximo detalle y tarda más.</p>
+      </div>
 
-        <div class="field">
-          <label for="modelSelect">Modelo de IA</label>
-          <select id="modelSelect">
-            <option value="animevideo">Video IA / Animado (recomendado)</option>
-            <option value="general">Fotorrealista general</option>
-            <option value="anime">Ilustración / Anime</option>
-          </select>
-          <p class="hint" id="modelHint">Para clips generados con IA, el primero suele dar el mejor resultado.</p>
-        </div>
+      <!-- Modelo -->
+      <div class="card" style="margin-top:var(--gap)">
+        <div class="card-head"><label class="label" for="modelSelect">Modelo de IA</label></div>
+        <select id="modelSelect">
+          <option value="animevideo">Video IA / Animado — recomendado</option>
+          <option value="general">Fotorrealista general</option>
+          <option value="anime">Ilustración / Anime</option>
+        </select>
+        <p class="hint" id="modelHint">Para clips generados con IA, el primero suele dar el mejor resultado.</p>
+      </div>
 
-        <div class="field switch-field" id="videoOnly">
+      <!-- Movimiento (solo video) -->
+      <div class="card card-mint" id="videoOnly" style="margin-top:var(--gap)">
+        <div class="switch-row">
           <label class="switch">
             <input type="checkbox" id="interpolate" />
             <span class="slider"></span>
           </label>
-          <div>
-            <span class="switch-label">Suavizar movimiento (interpolar frames)</span>
-            <p class="hint">Duplica los fps para un movimiento más fluido. Requiere RIFE instalado.</p>
+          <div class="text">
+            <span class="switch-label">Suavizar movimiento</span>
+            <p class="hint">Duplica los fps para un movimiento más fluido.</p>
           </div>
         </div>
+      </div>
 
-        <div class="field switch-field">
+      <!-- Marca de agua -->
+      <div class="card card-pink" style="margin-top:var(--gap)">
+        <div class="switch-row">
           <label class="switch">
             <input type="checkbox" id="removeWm" />
             <span class="slider"></span>
           </label>
-          <div>
+          <div class="text">
             <span class="switch-label">Quitar marca de agua</span>
-            <p class="hint">Borrá un logo (ej: la estrella de Veo/Gemini) marcando su zona exacta.</p>
+            <p class="hint">Borrá un logo (ej: la estrella de Veo) marcando su zona exacta.</p>
           </div>
         </div>
 
-        <div class="field wm-options hidden" id="wmOptions">
-          <label>Marcá la zona de la marca de agua</label>
-          <p class="hint">Arrastrá con el mouse para dibujar un recuadro justo encima de la marca. Cuanto más ajustado, mejor.</p>
+        <div class="wm-block hidden" id="wmOptions">
+          <span class="label">Marcá la zona</span>
+          <p class="hint">Arrastrá con el mouse un recuadro justo encima de la marca. Cuanto más ajustado, más limpio queda.</p>
           <div class="wm-stage" id="wmStage">
             <canvas id="wmCanvas"></canvas>
             <div class="wm-overlay" id="wmOverlay">Elegí un archivo para ver la previsualización.</div>
           </div>
           <div class="wm-actions">
-            <button type="button" class="ghost-sm" id="wmClear">Borrar recuadro</button>
+            <button type="button" class="btn-sm" id="wmClear">Borrar recuadro</button>
             <span class="hint" id="wmHint"></span>
           </div>
-          <div class="wm-method">
-            <label>Método de borrado</label>
-            <div class="segmented" id="wmMethodGroup">
-              <button type="button" data-value="fast" class="active">Rápido (difuminado)</button>
+
+          <div class="wm-block">
+            <span class="label">Método de borrado</span>
+            <div class="segmented compact" id="wmMethodGroup" style="margin-top:8px">
+              <button type="button" data-value="fast" class="active">Rápido</button>
               <button type="button" data-value="ia">Relleno con IA</button>
             </div>
             <p class="hint" id="wmMethodHint"></p>
@@ -106,40 +115,36 @@
         </div>
       </div>
 
-      <button id="startBtn" class="primary" disabled>Mejorar</button>
-      <p id="modeNote" class="mode-note"></p>
+      <button id="startBtn" class="btn btn-primary" style="margin-top:var(--gap)" disabled>Mejorar video</button>
+      <p id="modeNote" class="note" style="margin-top:12px"></p>
     </section>
 
-    <!-- Panel de progreso / resultado -->
-    <section class="card" id="progressCard" hidden>
-      <h2 id="progressTitle">Procesando…</h2>
-      <div class="progress-wrap">
-        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
-        <div class="progress-meta">
-          <span id="progressStage">Preparando…</span>
-          <span id="progressPct">0%</span>
-        </div>
-      </div>
-      <p id="progressMsg" class="progress-msg"></p>
-
-      <div id="resultBox" class="result-box hidden">
-        <video id="resultVideo" controls playsinline class="hidden"></video>
-        <img id="resultImage" class="hidden" alt="Resultado" />
-        <a id="downloadBtn" class="primary" download>⬇️ Descargar</a>
-        <button id="againBtn" class="ghost">Procesar otro</button>
+    <!-- Progreso / resultado -->
+    <section id="progressCard" class="progress-card" hidden>
+      <div class="pct-block">
+        <div class="pct-value"><span id="progressPct">0</span><span>%</span></div>
+        <div class="pct-stage" id="progressStage">Preparando…</div>
+        <div class="pct-msg" id="progressMsg"></div>
+        <div class="track"><div id="progressBar" class="bar"></div></div>
       </div>
 
-      <div id="errorBox" class="error-box hidden">
-        <p class="error-title">Ocurrió un problema</p>
+      <div id="resultBox" class="card card-mint hidden">
+        <div class="card-head"><span class="label">Listo</span></div>
+        <video id="resultVideo" class="result-media hidden" controls playsinline></video>
+        <img id="resultImage" class="result-media hidden" alt="Resultado" />
+        <a id="downloadBtn" class="btn btn-primary" download>Descargar</a>
+        <button id="againBtn" class="btn btn-ghost">Procesar otro</button>
+      </div>
+
+      <div id="errorBox" class="card error-card hidden">
+        <p class="error-title">Se detuvo el proceso</p>
         <p id="errorMsg" class="error-msg"></p>
-        <button id="retryBtn" class="ghost">Volver a intentar</button>
+        <button id="retryBtn" class="btn btn-ghost">Volver a intentar</button>
       </div>
     </section>
   </main>
 
-  <footer class="foot">
-    <span>Tus archivos se procesan solo en tu equipo.</span>
-  </footer>
+  <footer class="foot">Tus archivos se procesan solo en tu equipo</footer>
 
   <script src="/static/app.js"></script>
 </body>
