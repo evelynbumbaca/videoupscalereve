@@ -49,6 +49,15 @@ xcopy "%SRC%\*" "." /E /Y /C /I >nul
 
 rmdir /s /q "%TMP%"
 
+REM Una version nueva puede traer dependencias nuevas. Si no las instalamos,
+REM la app pierde funciones en silencio (fue lo que paso con onnxruntime).
+if exist ".venv\Scripts\python.exe" (
+  echo.
+  echo Actualizando dependencias...
+  ".venv\Scripts\python.exe" -m pip install -q -r requirements.txt
+  if errorlevel 1 echo    [!] No se pudieron actualizar (revisa tu conexion^). La app puede quedar sin alguna funcion.
+)
+
 echo.
 echo ============================================================
 echo  Listo! Ya tenes la ultima version, con todos los archivos.

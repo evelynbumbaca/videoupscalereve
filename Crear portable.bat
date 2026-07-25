@@ -19,7 +19,12 @@ if not exist ".venv\Scripts\python.exe" echo [!] Primero abri la app con "Inicia
 
 call ".venv\Scripts\activate.bat"
 
-echo [1/3] Instalando el empaquetador (PyInstaller)...
+echo [1/3] Preparando dependencias...
+REM IMPORTANTE: si falta alguna dependencia, PyInstaller NO falla: genera un
+REM portable al que le faltan funciones (por ejemplo, sin relleno con IA).
+REM Por eso nos aseguramos de tenerlas todas antes de empaquetar.
+python -m pip install -q -r requirements.txt
+if errorlevel 1 echo [!] No se pudieron instalar las dependencias. Revisa tu conexion. && pause && exit /b 1
 python -m pip install -q pyinstaller
 if errorlevel 1 echo [!] No se pudo instalar PyInstaller. Revisa tu conexion. && pause && exit /b 1
 

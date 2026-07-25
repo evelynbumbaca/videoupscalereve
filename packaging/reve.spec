@@ -6,9 +6,31 @@ Los binarios de ffmpeg/Real-ESRGAN y los datos (uploads/outputs) viven JUNTO
 al .exe en tiempo de ejecución; el frontend viaja empaquetado.
 """
 import os
+import sys
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 project_root = os.path.abspath(os.path.join(SPECPATH, ".."))
+
+# Verificación temprana: si falta una dependencia, PyInstaller la omite en
+# silencio y genera un portable roto (sin avisar). Preferimos fallar acá con un
+# mensaje claro antes que entregar algo que no funciona.
+for _mod, _fix in (("onnxruntime", "relleno de marca de agua con IA"),
+                   ("numpy", "procesamiento de imágenes"),
+                   ("PIL", "lectura/escritura de imágenes")):
+    try:
+        __import__(_mod)
+    except ImportError:
+        raise SystemExit(
+            f"\n[!] Falta '{_mod}' (necesario para: {_fix}).\n"
+            f"    Instalá las dependencias antes de empaquetar:\n"
+            f"        pip install -r requirements.txt\n"
+        )
+
+if not os.path.isfile(os.path.join(project_root, "models", "migan.onnx")):
+    raise SystemExit(
+        "\n[!] Falta models/migan.onnx (modelo de relleno con IA).\n"
+        "    Actualizá el proyecto para obtenerlo.\n"
+    )
 
 datas = [
     (os.path.join(project_root, "frontend"), "frontend"),

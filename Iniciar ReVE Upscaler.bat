@@ -55,6 +55,14 @@ if not exist ".venv\Scripts\python.exe" (
   echo.
 ) else (
   call ".venv\Scripts\activate.bat"
+  REM Una actualizacion puede haber sumado dependencias nuevas. Si falta
+  REM alguna, la instalamos ahora en vez de arrancar sin esa funcion.
+  python -c "import fastapi, uvicorn, onnxruntime, numpy, PIL" 2>nul
+  if errorlevel 1 (
+    echo Faltan dependencias nuevas. Instalandolas...
+    python -m pip install -q -r requirements.txt
+    echo.
+  )
 )
 
 REM --- 3) Iniciar la aplicacion ---------------------------------------------
