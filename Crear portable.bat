@@ -46,7 +46,14 @@ if exist "tools\ffmpeg" (
   for /r "tools\ffmpeg" %%F in (ffmpeg.exe ffprobe.exe) do @if exist "%%F" copy /Y "%%F" "%DEST%\ffmpeg\" >nul
 )
 if exist "tools\realesrgan" xcopy "tools\realesrgan" "%DEST%\realesrgan" /E /I /Y >nul
-if exist "tools\rife"       xcopy "tools\rife"       "%DEST%\rife"       /E /I /Y >nul
+
+REM RIFE trae ~15 modelos (448 MB) y la app usa solo rife-v4.6 (10 MB, el mas
+REM nuevo). Copiamos el ejecutable, sus DLLs y ese unico modelo.
+if exist "tools\rife" (
+  mkdir "%DEST%\rife" 2>nul
+  for /r "tools\rife" %%F in (*.exe *.dll) do @if exist "%%F" copy /Y "%%F" "%DEST%\rife\" >nul
+  for /d /r "tools\rife" %%D in (rife-v4.6) do @if exist "%%D" xcopy "%%D" "%DEST%\rife\rife-v4.6" /E /I /Y >nul
+)
 
 REM Limpiamos la carpeta de trabajo temporal del empaquetado.
 if exist "build" rmdir /s /q "build"

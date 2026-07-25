@@ -34,17 +34,41 @@ echo  Que queres hacer?
 echo     [1] Limpiar solo lo temporal   (RECOMENDADO, no perdes nada)
 echo     [2] Temporal + el portable (dist)
 echo     [3] Todo lo anterior + tus resultados (outputs)
+echo     [4] Adelgazar modelos que la app no usa (libera ~440 MB)
 echo     [0] Salir sin borrar nada
 echo.
 set "OPC="
 set /p "OPC=Elegi una opcion y presiona Enter: "
 
 if "%OPC%"=="0" goto :fin
+if "%OPC%"=="4" goto :slim
 if "%OPC%"=="1" goto :limpiar
 if "%OPC%"=="2" goto :limpiar
 if "%OPC%"=="3" goto :limpiar
 echo.
 echo Opcion no valida. No se borro nada.
+goto :fin
+
+:slim
+echo.
+echo  Quitando los modelos de RIFE que la app no usa...
+echo  (se conserva rife-v4.6, que es el mas nuevo y el que usamos)
+echo.
+if exist ".venv\Scripts\python.exe" (
+  ".venv\Scripts\python.exe" scripts\setup_tools.py --slim
+) else (
+  python scripts\setup_tools.py --slim
+)
+echo.
+echo  Tambien se limpio lo temporal:
+call :del "work"
+call :del "uploads"
+call :del "build"
+echo.
+echo ============================================================
+echo  Listo! Volve a crear el portable con "Crear portable.bat"
+echo  para que quede mas liviano tambien.
+echo ============================================================
 goto :fin
 
 :limpiar

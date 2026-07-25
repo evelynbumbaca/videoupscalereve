@@ -134,7 +134,13 @@ pyinstaller "packaging/reve.spec" --noconfirm
 ```
 
 El resultado queda en `dist/ReVE Upscaler/`. Comprimí esa carpeta en un `.zip` y
-compartila. Notas:
+compartila.
+
+> 💡 Antes de generarlo, corré `python scripts/setup_tools.py --slim` (u opción 4
+> de `Limpiar espacio.bat`): el paquete de RIFE trae ~15 modelos y la app usa solo
+> `rife-v4.6`, así que eso libera **~440 MB** en tu disco y en el portable.
+
+Notas:
 - **Incluye todo**: upscaling con IA, borrado de marca de agua con IA (MI-GAN),
   imágenes y video. Pesa ~250 MB + ffmpeg y modelos de `tools/`.
 - No incluye el motor LaMa (torch, 1,3 GB). El portable usa MI-GAN, que da

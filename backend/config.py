@@ -155,6 +155,28 @@ def rife_path() -> str | None:
     )
 
 
+# Modelo de RIFE que usamos. El binario trae ~15 modelos (448 MB) y por defecto
+# usa rife-v2.3, que es viejo. rife-v4.6 es el más nuevo y mejor, y pesa 10 MB:
+# lo elegimos explícitamente y así el resto ni hace falta distribuirlo.
+RIFE_MODEL_NAME = "rife-v4.6"
+
+
+def rife_model_dir() -> str | None:
+    """Carpeta del modelo rife-v4.6, si está disponible."""
+    binary = rife_path()
+    if not binary:
+        return None
+    base = Path(binary).parent
+    for cand in (base / RIFE_MODEL_NAME, base / "models" / RIFE_MODEL_NAME):
+        if cand.is_dir():
+            return str(cand)
+    # por si el release quedó en una subcarpeta
+    for found in base.rglob(RIFE_MODEL_NAME):
+        if found.is_dir():
+            return str(found)
+    return None
+
+
 def lama_model_path() -> str | None:
     """Modelo LaMa (big-lama.pt): relleno de marca de agua de máxima calidad.
     Complemento opcional y pesado (requiere torch). Si no está, se usa MI-GAN."""

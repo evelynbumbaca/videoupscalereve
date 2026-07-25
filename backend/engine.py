@@ -564,6 +564,11 @@ def interpolate_frames(
         binary, "-i", str(in_dir), "-o", str(out_dir), "-n", str(expected),
         "-g", str(config.REALESRGAN_GPU_ID),
     ]
+    # Elegimos rife-v4.6 explícitamente: es más nuevo y mejor que el modelo por
+    # defecto (rife-v2.3) y permite distribuir solo esos 10 MB en vez de 448.
+    model_dir = config.rife_model_dir()
+    if model_dir:
+        cmd += ["-m", model_dir]
     # Misma precaución que en el upscaling: salida a archivo para evitar deadlocks.
     log_path = out_dir.parent / "rife.log"
     with open(log_path, "w", encoding="utf-8", errors="replace") as logf:

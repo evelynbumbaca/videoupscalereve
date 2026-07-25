@@ -161,11 +161,51 @@ def install_ai_watermark() -> None:
     print("\n✅ Complemento de relleno con IA listo.")
 
 
+def slim_tools() -> None:
+    """Borra los modelos de RIFE que la app no usa (~440 MB).
+
+    El paquete de RIFE trae ~15 modelos; nosotros usamos solo rife-v4.6 (el
+    más nuevo y el más chico). Los demás son peso muerto tanto en tu disco
+    como en el portable que compartís.
+    """
+    sys.path.insert(0, str(ROOT))
+    try:
+        from backend import config as cfg
+    except Exception:
+        print("(Ejecutá esto desde la raíz del proyecto.)")
+        return
+
+    binary = cfg.rife_path()
+    if not binary:
+        print("• RIFE no está instalado: no hay nada que adelgazar.")
+        return
+
+    base = Path(binary).parent
+    keep = cfg.RIFE_MODEL_NAME
+    removed_mb = 0
+    for item in base.iterdir():
+        if not item.is_dir() or item.name == keep:
+            continue
+        if not item.name.startswith("rife"):
+            continue  # no tocamos nada que no sea un modelo de rife
+        size = sum(f.stat().st_size for f in item.rglob("*") if f.is_file())
+        shutil.rmtree(item, ignore_errors=True)
+        removed_mb += size / 1048576
+        print(f"  – quitado {item.name} ({size/1048576:.0f} MB)")
+
+    if removed_mb:
+        print(f"\n✅ Liberados ~{removed_mb:.0f} MB. Se conservó {keep}, que es el que usa la app.")
+    else:
+        print(f"  Ya estaba adelgazado (solo queda {keep}).")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Descarga los binarios de ReVE Upscaler.")
     ap.add_argument("--only", choices=["ffmpeg", "realesrgan", "rife"], help="instala solo un componente")
     ap.add_argument("--ai-watermark", action="store_true",
                     help="instala el complemento opcional de relleno con IA (torch + modelo LaMa)")
+    ap.add_argument("--slim", action="store_true",
+                    help="borra los modelos de RIFE que no se usan (~440 MB)")
     ap.add_argument("--list", action="store_true", help="muestra el estado y sale")
     args = ap.parse_args()
 
@@ -173,6 +213,10 @@ def main() -> None:
 
     if args.list:
         status()
+        return
+
+    if args.slim:
+        slim_tools()
         return
 
     if args.ai_watermark:
