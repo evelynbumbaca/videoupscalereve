@@ -61,6 +61,32 @@ def clear_binary_cache() -> None:
     _BINARY_CACHE.clear()
 
 
+def cleanup_temp_dirs() -> int:
+    """Borra los temporales huérfanos al arrancar y devuelve los MB liberados.
+
+    Los trabajos viven solo en memoria: si la app se cerró a mitad de un
+    procesamiento, quedaron frames sueltos en work/ y el archivo original en
+    uploads/. Al iniciar no hay ningún trabajo en curso, así que todo lo que
+    haya ahí es basura segura de borrar (los resultados van a outputs/, que
+    no se toca).
+    """
+    freed = 0
+    for base in (WORK_DIR, UPLOADS_DIR):
+        if not base.is_dir():
+            continue
+        for item in base.iterdir():
+            try:
+                if item.is_dir():
+                    freed += sum(f.stat().st_size for f in item.rglob("*") if f.is_file())
+                    shutil.rmtree(item, ignore_errors=True)
+                else:
+                    freed += item.stat().st_size
+                    item.unlink(missing_ok=True)
+            except OSError:
+                pass  # si algo está en uso, lo dejamos para la próxima
+    return round(freed / (1024 * 1024))
+
+
 def _find_binary(names: list[str], subfolders: list[str] | None = None) -> str | None:
     """Busca un ejecutable primero en tools/ y luego en el PATH del sistema.
 

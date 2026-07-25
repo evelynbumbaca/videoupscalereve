@@ -25,12 +25,31 @@ if errorlevel 1 echo [!] No se pudo instalar PyInstaller. Revisa tu conexion. &&
 
 echo.
 echo [2/3] Generando el ejecutable (tarda unos minutos)...
+REM Borramos restos de builds anteriores para que no se acumule peso.
+if exist "dist" rmdir /s /q "dist"
+if exist "build" rmdir /s /q "build"
 pyinstaller "packaging\reve.spec" --noconfirm
 if errorlevel 1 echo [!] Fallo la generacion del ejecutable. && pause && exit /b 1
 
 echo.
 echo [3/3] Copiando ffmpeg y modelos al portable...
-if exist "tools" xcopy "tools" "dist\ReVE Upscaler\tools" /E /I /Y >nul
+REM Copiamos SOLO lo que el portable realmente usa:
+REM  - ffmpeg/ffprobe (no ffplay: es un reproductor que la app no usa, ~130 MB)
+REM  - modelos de upscaling (realesrgan, rife)
+REM  - NO copiamos tools\lama (el modelo LaMa pesa ~200 MB y necesita torch,
+REM    que el portable no lleva; usa MI-GAN, que ya viene incluido)
+set "DEST=dist\ReVE Upscaler\tools"
+mkdir "%DEST%" 2>nul
+
+if exist "tools\ffmpeg" (
+  mkdir "%DEST%\ffmpeg" 2>nul
+  for /r "tools\ffmpeg" %%F in (ffmpeg.exe ffprobe.exe) do @if exist "%%F" copy /Y "%%F" "%DEST%\ffmpeg\" >nul
+)
+if exist "tools\realesrgan" xcopy "tools\realesrgan" "%DEST%\realesrgan" /E /I /Y >nul
+if exist "tools\rife"       xcopy "tools\rife"       "%DEST%\rife"       /E /I /Y >nul
+
+REM Limpiamos la carpeta de trabajo temporal del empaquetado.
+if exist "build" rmdir /s /q "build"
 
 echo.
 echo ============================================================

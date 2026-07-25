@@ -122,6 +122,24 @@ Tus modelos de IA, tu entorno y tus videos quedan intactos.
 
 ---
 
+## 🧹 Liberar espacio en disco
+
+Con el uso, la carpeta acumula temporales (sobre todo si alguna vez cerraste la
+app a mitad de un proceso). Para limpiar sin riesgo:
+
+Doble clic en **`Limpiar espacio.bat`**. Te muestra cuánto ocupa cada cosa y te
+deja elegir:
+
+- **Opción 1 (recomendada):** borra solo temporales y basura. **No perdés nada.**
+- **Opción 2:** además borra el portable generado (`dist`), que podés volver a crear.
+- **Opción 3:** también borra `outputs` (tus videos/imágenes ya mejorados) — usala
+  solo si ya los guardaste en otro lado.
+
+> La app además **limpia sola** los temporales cada vez que la abrís, así que esto
+> ya casi no debería hacer falta.
+
+---
+
 ## 🆘 Si algo no anda
 
 | Qué ves | Qué hacer |

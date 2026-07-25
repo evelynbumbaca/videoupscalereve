@@ -18,6 +18,12 @@ from .jobs import run_job_async, store
 
 app = FastAPI(title="ReVE Upscaler", version=__version__)
 
+# Al arrancar no hay trabajos en curso: lo que quedó en work/ y uploads/ es
+# basura de ejecuciones cortadas (ventana cerrada a mitad de un proceso).
+_freed_mb = config.cleanup_temp_dirs()
+if _freed_mb >= 1:
+    print(f"  (Limpieza automática: {_freed_mb} MB de temporales liberados)")
+
 
 @app.get("/api/system")
 def system() -> dict:
