@@ -21,11 +21,12 @@ app = FastAPI(title="ReVE Upscaler", version=__version__)
 
 @app.get("/api/system")
 def system() -> dict:
-    from .engine import lama_available
+    from .engine import ai_inpaint_available, ai_inpaint_engine
     report = hardware.system_report()
     report["models"] = list(MODELS.keys())
     report["version"] = __version__
-    report["ai_watermark"] = lama_available()  # complemento de relleno con IA
+    report["ai_watermark"] = ai_inpaint_available()
+    report["ai_watermark_engine"] = ai_inpaint_engine()
     return report
 
 

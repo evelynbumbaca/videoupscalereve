@@ -40,7 +40,7 @@ def process(job: Job, input_path: Path) -> Path:
     bx, by, bw, bh = (list(wm_box) + [0, 0, 0, 0])[:4]
     has_box = bw > 0 and bh > 0
     # El relleno con IA requiere el complemento instalado y un recuadro marcado.
-    use_ia_wm = remove_wm and wm_method == "ia" and has_box and engine.lama_available()
+    use_ia_wm = remove_wm and wm_method == "ia" and has_box and engine.ai_inpaint_available()
 
     work = config.WORK_DIR / job.id
     frames_in = work / "in"
@@ -98,13 +98,20 @@ def process(job: Job, input_path: Path) -> Path:
         if use_ia_wm:
             cb, w = stage_progress("inpaint", "Borrando marca con IA")
             cb(0.0, "Cargando modelo de IA… (la primera vez tarda unos segundos)")
-            engine.inpaint_frames_lama(frames_in, (bx, by, bw, bh), n_frames, progress=cb)
+            engine.inpaint_frames_ai(frames_in, (bx, by, bw, bh), n_frames, progress=cb)
             base["acc"] += w
 
-        # 3) Upscaling
+        # 3) Upscaling. Si la IA falla (por ejemplo, una PC sin GPU compatible
+        # con Vulkan), no abortamos el trabajo: seguimos en modo respaldo.
         if use_ai:
             cb, w = stage_progress("upscale", "Escalando con IA")
-            engine.upscale_frames_ai(frames_in, frames_up, model_key, scale, n_frames, progress=cb)
+            try:
+                engine.upscale_frames_ai(frames_in, frames_up, model_key, scale, n_frames, progress=cb)
+            except engine.EngineError as exc:
+                job.message = f"El escalado con IA no pudo usarse ({_short(exc)}). Sigo en modo respaldo…"
+                _safe_rmtree(frames_up)
+                cb, w = stage_progress("upscale", "Escalando (modo respaldo)")
+                engine.upscale_frames_fallback(frames_in, frames_up, scale, info, progress=cb)
         else:
             cb, w = stage_progress("upscale", "Escalando (modo respaldo)")
             engine.upscale_frames_fallback(frames_in, frames_up, scale, info, progress=cb)
@@ -113,12 +120,17 @@ def process(job: Job, input_path: Path) -> Path:
         current_frames_dir = frames_up
         out_fps = info.fps
 
-        # 4) Interpolación opcional
+        # 4) Interpolación opcional. Es un extra: si falla, seguimos sin ella
+        # en vez de perder todo el trabajo ya hecho.
         if interpolate:
             cb, w = stage_progress("interpolate", "Suavizando movimiento")
-            engine.interpolate_frames(frames_up, frames_final, interp_factor, n_frames, progress=cb)
-            current_frames_dir = frames_final
-            out_fps = info.fps * interp_factor
+            try:
+                engine.interpolate_frames(frames_up, frames_final, interp_factor, n_frames, progress=cb)
+                current_frames_dir = frames_final
+                out_fps = info.fps * interp_factor
+            except engine.EngineError as exc:
+                job.message = f"No se pudo suavizar el movimiento ({_short(exc)}). Continúo sin eso…"
+                _safe_rmtree(frames_final)
             base["acc"] += w
 
         # 5) Reensamblado + audio
@@ -153,7 +165,7 @@ def process_image(job: Job, input_path: Path) -> Path:
     wm_method = opts.get("wm_method", "fast")
     bx, by, bw, bh = (list(wm_box) + [0, 0, 0, 0])[:4]
     has_box = bw > 0 and bh > 0
-    use_ia_wm = remove_wm and wm_method == "ia" and has_box and engine.lama_available()
+    use_ia_wm = remove_wm and wm_method == "ia" and has_box and engine.ai_inpaint_available()
 
     work = config.WORK_DIR / job.id
     frames_in = work / "in"
@@ -182,22 +194,29 @@ def process_image(job: Job, input_path: Path) -> Path:
         # Relleno de marca con IA (LaMa).
         if use_ia_wm:
             set_stage("Cargando modelo de IA…", 0.14, "La primera vez tarda unos segundos")
-            engine.inpaint_frames_lama(
+            engine.inpaint_frames_ai(
                 frames_in, (bx, by, bw, bh), 1,
                 progress=lambda f, m: set_stage("Borrando marca con IA", 0.15 + 0.30 * f, m),
             )
 
-        # Upscaling.
-        if use_ai:
-            engine.upscale_frames_ai(
-                frames_in, frames_up, model_key, scale, 1,
-                progress=lambda f, m: set_stage("Escalando con IA", 0.5 + 0.45 * f, m),
-            )
-        else:
+        # Upscaling (con respaldo automático si la IA no puede usarse).
+        def _fallback_upscale() -> None:
             engine.upscale_frames_fallback(
                 frames_in, frames_up, scale, info,
                 progress=lambda f, m: set_stage("Escalando (modo respaldo)", 0.5 + 0.45 * f, m),
             )
+
+        if use_ai:
+            try:
+                engine.upscale_frames_ai(
+                    frames_in, frames_up, model_key, scale, 1,
+                    progress=lambda f, m: set_stage("Escalando con IA", 0.5 + 0.45 * f, m),
+                )
+            except engine.EngineError:
+                _safe_rmtree(frames_up)
+                _fallback_upscale()
+        else:
+            _fallback_upscale()
 
         out_frame = next(iter(sorted(frames_up.glob("*.png"))), None)
         if out_frame is None:
@@ -225,3 +244,9 @@ def _safe_rmtree(path: Path) -> None:
         shutil.rmtree(path, ignore_errors=True)
     except OSError:
         pass
+
+
+def _short(exc: Exception, limit: int = 120) -> str:
+    """Primera línea del error, recortada, para mostrar en la UI."""
+    text = str(exc).strip().splitlines()[0] if str(exc).strip() else "error desconocido"
+    return text[:limit]

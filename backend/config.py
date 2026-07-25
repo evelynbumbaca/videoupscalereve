@@ -51,12 +51,36 @@ REALESRGAN_TILE_SIZE = int(os.environ.get("REVE_TILE_SIZE", "256"))
 REALESRGAN_GPU_ID = os.environ.get("REVE_GPU_ID", "0")
 
 
+# Caché de rutas ya resueltas: la búsqueda recorre tools/ recursivamente y se
+# llama en cada request; con ffmpeg instalado (cientos de archivos) eso se nota.
+_BINARY_CACHE: dict[str, str | None] = {}
+
+
+def clear_binary_cache() -> None:
+    """Olvida las rutas cacheadas (tras instalar herramientas nuevas)."""
+    _BINARY_CACHE.clear()
+
+
 def _find_binary(names: list[str], subfolders: list[str] | None = None) -> str | None:
     """Busca un ejecutable primero en tools/ y luego en el PATH del sistema.
 
     `names` incluye variantes (con y sin .exe). `subfolders` son carpetas
     dentro de tools/ donde suelen quedar los releases descomprimidos.
+    El resultado se cachea (incluso cuando no se encuentra nada).
     """
+    cache_key = "|".join(names)
+    if cache_key in _BINARY_CACHE:
+        found = _BINARY_CACHE[cache_key]
+        # Revalidamos barato: si el archivo desapareció, volvemos a buscar.
+        if found is None or Path(found).is_file():
+            return found
+
+    result = _search_binary(names, subfolders)
+    _BINARY_CACHE[cache_key] = result
+    return result
+
+
+def _search_binary(names: list[str], subfolders: list[str] | None = None) -> str | None:
     candidates: list[Path] = []
     search_roots = [TOOLS_DIR]
     if subfolders:
@@ -106,9 +130,22 @@ def rife_path() -> str | None:
 
 
 def lama_model_path() -> str | None:
-    """Modelo LaMa (big-lama.pt) para el relleno de marca de agua con IA.
-    Es un complemento opcional que se instala aparte."""
+    """Modelo LaMa (big-lama.pt): relleno de marca de agua de máxima calidad.
+    Complemento opcional y pesado (requiere torch). Si no está, se usa MI-GAN."""
     for cand in (TOOLS_DIR / "lama" / "big-lama.pt", TOOLS_DIR / "big-lama.pt"):
+        if cand.is_file():
+            return str(cand)
+    return None
+
+
+def migan_model_path() -> str | None:
+    """Modelo MI-GAN en ONNX: relleno de marca de agua liviano (~26 MB).
+    Viene incluido con la app, así que el portable también lo lleva."""
+    roots = [ROOT / "models"]
+    if getattr(sys, "frozen", False):
+        roots.insert(0, Path(getattr(sys, "_MEIPASS", ROOT)) / "models")
+    for root in roots:
+        cand = root / "migan.onnx"
         if cand.is_file():
             return str(cand)
     return None
@@ -117,3 +154,8 @@ def lama_model_path() -> str | None:
 def torch_available() -> bool:
     import importlib.util
     return importlib.util.find_spec("torch") is not None
+
+
+def onnxruntime_available() -> bool:
+    import importlib.util
+    return importlib.util.find_spec("onnxruntime") is not None

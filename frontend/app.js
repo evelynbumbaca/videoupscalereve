@@ -190,12 +190,15 @@ function configureWmMethod(sys) {
 function updateWmMethodHint() {
   const hint = $("#wmMethodHint");
   if (!hint) return;
+  const engine = state.system?.ai_watermark_engine;
   if (state.wmMethod === "ia") {
-    hint.textContent = "Relleno generativo con IA: mejor para pantallas grandes. Más lento.";
+    hint.textContent = engine === "lama"
+      ? "Relleno generativo con IA (motor de máxima calidad). Ideal para pantallas grandes."
+      : "Relleno generativo con IA: reconstruye la zona. Ideal para pantallas grandes.";
   } else if (state.system?.ai_watermark) {
-    hint.textContent = "Difuminado rápido. Para máxima calidad, probá 'Relleno con IA'.";
+    hint.textContent = "Difuminado rápido. Para mejor calidad, usá 'Relleno con IA'.";
   } else {
-    hint.textContent = "Difuminado rápido. El 'Relleno con IA' es un complemento opcional (ver guía).";
+    hint.textContent = "Difuminado rápido. El 'Relleno con IA' no está disponible en esta instalación.";
   }
 }
 

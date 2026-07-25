@@ -120,8 +120,8 @@ def status() -> None:
     print("\nEstado de las herramientas:")
     for tool, ok in rep["tools"].items():
         print(f"  {'✅' if ok else '⬜'} {tool}")
-    ai_wm = engine.lama_available()
-    print(f"  {'✅' if ai_wm else '⬜'} relleno con IA (marca de agua)")
+    ai_wm = engine.ai_inpaint_available()
+    print(f"  {'✅' if ai_wm else '⬜'} relleno con IA (motor: {engine.ai_inpaint_engine() or 'ninguno'})")
     print(f"\nModo actual de la app: {rep['mode']}")
     print(f"GPU detectada: {rep['gpu']['name']}\n")
 

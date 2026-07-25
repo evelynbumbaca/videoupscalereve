@@ -94,27 +94,29 @@ Para forzar una GPU concreta usá `REVE_GPU_ID` (0 = la primera). `-1` fuerza CP
 
 ---
 
-## 🪄 Relleno de marca de agua con IA (complemento opcional)
+## 🪄 Relleno de marca de agua con IA
 
 El modo **rápido** (`delogo`) reconstruye difuminando desde los bordes: sirve para
 logos chicos, pero en pantallas grandes puede notarse. El modo **relleno con IA**
-usa el modelo **LaMa** para reconstruir la zona de forma inteligente (mucho más
-limpio). Es un complemento **opcional** porque pesa (~300-400 MB: `torch` + modelo).
+reconstruye la zona de forma inteligente (mucho más limpio).
 
-Para instalarlo:
+Hay **dos motores** y la app elige solo el mejor disponible:
+
+| Motor | Peso | Velocidad | Cuándo se usa |
+|---|---|---|---|
+| **MI-GAN** (ONNX) | ~85 MB | ~0,8 s/frame | Incluido por defecto. También va en el portable. |
+| **LaMa** (torch) | ~1,3 GB | ~2 s/frame | Opcional. Un poco más prolijo en fondos complejos. |
+
+MI-GAN viene incluido: **no hay que instalar nada** para usar el relleno con IA.
+Si querés el motor de máxima calidad (LaMa), se instala aparte:
 
 ```bash
-# opción A: script
-python scripts/setup_tools.py --ai-watermark
-
-# opción B (Windows): doble clic en
-#   "Instalar relleno IA (opcional).bat"
+python scripts/setup_tools.py --ai-watermark      # o "Instalar relleno IA (opcional).bat"
 ```
 
-Luego, al quitar la marca de agua vas a poder elegir **"Relleno con IA"**.
-Corre en CPU (no necesita GPU) y procesa solo un recorte alrededor de la marca,
-así que es razonablemente rápido. En fondos muy movidos puede haber un leve
-parpadeo entre cuadros (limitación del relleno cuadro-a-cuadro).
+Ambos corren en CPU (no necesitan GPU) y procesan solo un recorte alrededor de la
+marca, así que son rápidos. En fondos muy movidos puede haber un leve parpadeo
+entre cuadros (limitación del relleno cuadro-a-cuadro).
 
 ## 📦 Crear un portable para compartir (Windows)
 
@@ -133,9 +135,12 @@ pyinstaller "packaging/reve.spec" --noconfirm
 
 El resultado queda en `dist/ReVE Upscaler/`. Comprimí esa carpeta en un `.zip` y
 compartila. Notas:
-- Incluye ffmpeg y los modelos de upscaling que ya tengas en `tools/`.
-- **No** incluye el complemento de relleno con IA (torch pesa demasiado); el
-  portable usa el borrado rápido de marca de agua.
+- **Incluye todo**: upscaling con IA, borrado de marca de agua con IA (MI-GAN),
+  imágenes y video. Pesa ~250 MB + ffmpeg y modelos de `tools/`.
+- No incluye el motor LaMa (torch, 1,3 GB). El portable usa MI-GAN, que da
+  calidad equivalente con 16x menos peso.
+- Si la PC de destino no tiene GPU compatible, la app **sigue funcionando**:
+  detecta el fallo y pasa sola al modo respaldo en vez de cortar el trabajo.
 - Al ser un `.exe` sin firmar, Windows puede mostrar el aviso de SmartScreen
   ("Más información" → "Ejecutar de todas formas").
 

@@ -3,3 +3,10 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-multipart>=0.0.9
+
+# Relleno de marca de agua con IA (motor liviano MI-GAN en ONNX, ~26 MB).
+# onnxruntime pesa ~60 MB: 20x menos que torch y con calidad equivalente,
+# así que viene en la instalación base y también en el portable.
+onnxruntime>=1.17
+numpy>=1.24
+pillow>=10.0

@@ -222,13 +222,39 @@ def delogo_filter(corner: str, size: str, width: int, height: int) -> str:
     return _delogo_str(x, y, w, h, width, height)
 
 
-# --- Quitar marca de agua con IA (relleno generativo, LaMa) ----------------
-_LAMA_MODEL = None  # se carga una sola vez
+# --- Quitar marca de agua con IA (relleno generativo) ----------------------
+# Hay dos motores posibles, y se elige el mejor disponible:
+#   • MI-GAN (ONNX, ~26 MB + onnxruntime): liviano y rápido. Viene incluido,
+#     así que el portable también tiene relleno con IA.
+#   • LaMa (torch, ~1,3 GB): un poco más prolijo en fondos complejos. Opcional.
+_LAMA_MODEL = None    # se cargan una sola vez
+_MIGAN_SESSION = None
+
+MIGAN_INPUT_SIZE = 512  # el modelo trabaja a 512x512
 
 
 def lama_available() -> bool:
-    """True si el complemento de IA (torch + modelo LaMa) está instalado."""
+    """True si el complemento pesado (torch + modelo LaMa) está instalado."""
     return config.torch_available() and config.lama_model_path() is not None
+
+
+def migan_available() -> bool:
+    """True si el motor liviano (onnxruntime + modelo MI-GAN) está disponible."""
+    return config.onnxruntime_available() and config.migan_model_path() is not None
+
+
+def ai_inpaint_available() -> bool:
+    """True si se puede borrar la marca con IA por cualquiera de los motores."""
+    return migan_available() or lama_available()
+
+
+def ai_inpaint_engine() -> str | None:
+    """Motor que se usará: 'lama' (máxima calidad) o 'migan' (liviano)."""
+    if lama_available():
+        return "lama"
+    if migan_available():
+        return "migan"
+    return None
 
 
 def _load_lama():
@@ -244,25 +270,98 @@ def _load_lama():
     return _LAMA_MODEL
 
 
-def inpaint_frames_lama(
+def _load_migan():
+    global _MIGAN_SESSION
+    if _MIGAN_SESSION is None:
+        import onnxruntime as ort
+        path = config.migan_model_path()
+        if not path:
+            raise EngineError("No se encontró el modelo de relleno con IA (migan.onnx).")
+        opts = ort.SessionOptions()
+        opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        _MIGAN_SESSION = ort.InferenceSession(path, opts, providers=["CPUExecutionProvider"])
+    return _MIGAN_SESSION
+
+
+def _fill_crop_lama(crop, mask):
+    """Reconstruye la zona enmascarada del recorte con LaMa (torch)."""
+    import numpy as np
+    import torch
+
+    model = _load_lama()
+    ch, cw = crop.shape[:2]
+    # LaMa requiere dimensiones múltiplo de 8: rellenamos y luego recortamos.
+    ph, pw = (8 - ch % 8) % 8, (8 - cw % 8) % 8
+    crop_p = np.pad(crop, ((0, ph), (0, pw), (0, 0)), mode="reflect") if (ph or pw) else crop
+    mask_p = np.pad(mask, ((0, ph), (0, pw)), mode="constant") if (ph or pw) else mask
+
+    image_t = torch.from_numpy(crop_p.transpose(2, 0, 1)[None]).float() / 255.0
+    mask_t = torch.from_numpy(mask_p[None, None]).float()
+    with torch.no_grad():
+        out = model(image_t, mask_t)
+    res = out[0].permute(1, 2, 0).cpu().numpy()
+    return np.clip(res * 255.0, 0, 255)[:ch, :cw]
+
+
+def _fill_crop_migan(crop, mask):
+    """Reconstruye la zona enmascarada del recorte con MI-GAN (ONNX).
+
+    El modelo trabaja a 512x512, así que escalamos el recorte, inferimos y
+    volvemos al tamaño original. Como el recorte es chico, escalarlo a 512
+    incluso le da más detalle a la reconstrucción.
+    """
+    import numpy as np
+    from PIL import Image
+
+    sess = _load_migan()
+    ch, cw = crop.shape[:2]
+    S = MIGAN_INPUT_SIZE
+
+    crop_s = np.asarray(
+        Image.fromarray(crop.astype(np.uint8)).resize((S, S), Image.BICUBIC)
+    ).astype(np.float32)
+    mask_s = np.asarray(
+        Image.fromarray((mask * 255).astype(np.uint8)).resize((S, S), Image.NEAREST)
+    ).astype(np.float32) / 255.0
+    mask_s = (mask_s > 0.5).astype(np.float32)
+
+    img_n = (crop_s / 127.5 - 1.0).transpose(2, 0, 1)[None]   # a [-1, 1]
+    msk_n = mask_s[None, None]
+    # MI-GAN espera 4 canales: [0.5 - máscara, imagen con el hueco borrado]
+    x = np.concatenate([0.5 - msk_n, img_n * (1.0 - msk_n)], axis=1).astype(np.float32)
+
+    out = sess.run(None, {sess.get_inputs()[0].name: x})[0]
+    res_s = ((out[0].transpose(1, 2, 0) + 1.0) * 127.5).clip(0, 255)
+    return np.asarray(
+        Image.fromarray(res_s.astype(np.uint8)).resize((cw, ch), Image.BICUBIC)
+    ).astype(np.float32)
+
+
+def inpaint_frames_ai(
     frames_dir: Path,
     box: tuple[int, int, int, int],
     total_frames: int,
     progress: ProgressCB | None = None,
+    engine_name: str | None = None,
 ) -> None:
-    """Borra la marca de agua con relleno generativo (LaMa) en cada frame.
+    """Borra la marca de agua con relleno generativo en cada frame.
 
     box = (x, y, w, h) en píxeles del frame original. Para ser rápido y no
     tocar el resto de la imagen, procesa solo un recorte alrededor de la zona
     y recompone únicamente los píxeles marcados (sin costuras afuera).
     """
     import numpy as np
-    import torch
     from PIL import Image
 
-    model = _load_lama()
-    bx, by, bw, bh = (int(v) for v in box)
+    engine_name = engine_name or ai_inpaint_engine()
+    if engine_name == "lama":
+        fill = _fill_crop_lama
+    elif engine_name == "migan":
+        fill = _fill_crop_migan
+    else:
+        raise EngineError("El relleno con IA no está disponible en esta instalación.")
 
+    bx, by, bw, bh = (int(v) for v in box)
     frames = sorted(frames_dir.glob("frame_*.png"))
     if not frames:
         raise EngineError("No hay frames para procesar.")
@@ -289,23 +388,11 @@ def inpaint_frames_lama(
         m = np.zeros((ch, cw), np.float32)
         m[(y0 - cy0):(y1 - cy0), (x0 - cx0):(x1 - cx0)] = 1.0
 
-        # LaMa requiere dimensiones múltiplo de 8: rellenamos y luego recortamos.
-        ph = (8 - ch % 8) % 8
-        pw = (8 - cw % 8) % 8
-        crop_p = np.pad(crop, ((0, ph), (0, pw), (0, 0)), mode="reflect") if (ph or pw) else crop
-        m_p = np.pad(m, ((0, ph), (0, pw)), mode="constant") if (ph or pw) else m
-
-        image_t = torch.from_numpy(crop_p.transpose(2, 0, 1)[None]).float() / 255.0
-        mask_t = torch.from_numpy(m_p[None, None]).float()
-        with torch.no_grad():
-            out = model(image_t, mask_t)
-        res = out[0].permute(1, 2, 0).cpu().numpy()
-        res = np.clip(res * 255.0, 0, 255)[:ch, :cw]
+        res = fill(crop, m)
 
         # Recompone: solo cambian los píxeles de la marca.
         m3 = m[..., None]
-        composed = crop * (1.0 - m3) + res * m3
-        arr[cy0:cy1, cx0:cx1] = composed
+        arr[cy0:cy1, cx0:cx1] = crop * (1.0 - m3) + res * m3
 
         Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).save(fp)
         done += 1
@@ -314,6 +401,10 @@ def inpaint_frames_lama(
 
     if progress:
         progress(1.0, f"{done} frames procesados con IA")
+
+
+# Alias retrocompatible (el pipeline viejo llamaba a esta función).
+inpaint_frames_lama = inpaint_frames_ai
 
 
 # --- Upscaling con IA -----------------------------------------------------
