@@ -35,7 +35,7 @@ const MODE = {
     formats: "PNG · JPG · WEBP · BMP · TIFF",
     endpoint: "/api/upload-image",
     defaultModel: "general",
-    modelHint: "Para fotos e imágenes realistas, 'Fotorrealista' suele ir mejor.",
+    modelHint: "Para fotos realistas, 'Fotorrealista' da más detalle pero es bastante más lento. Si tu imagen viene de IA, 'Video IA / Animado' es mucho más rápido.",
     startText: "Mejorar imagen",
   },
 };

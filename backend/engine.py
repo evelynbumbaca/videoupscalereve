@@ -306,9 +306,11 @@ def _fill_crop_lama(crop, mask):
 def _fill_crop_migan(crop, mask):
     """Reconstruye la zona enmascarada del recorte con MI-GAN (ONNX).
 
-    El modelo trabaja a 512x512, así que escalamos el recorte, inferimos y
-    volvemos al tamaño original. Como el recorte es chico, escalarlo a 512
-    incluso le da más detalle a la reconstrucción.
+    El modelo trabaja con entradas de 512x512. IMPORTANTE: el recorte se lleva
+    a ese tamaño SIN deformarlo — se completa con borde reflejado hasta quedar
+    cuadrado y recién ahí se escala. Estirar un recorte rectangular a 512x512
+    cambia la proporción de la imagen y arruina la reconstrucción.
+    Idealmente el recorte ya viene de 512x512 nativos (ver _native_window).
     """
     import numpy as np
     from PIL import Image
@@ -317,24 +319,58 @@ def _fill_crop_migan(crop, mask):
     ch, cw = crop.shape[:2]
     S = MIGAN_INPUT_SIZE
 
-    crop_s = np.asarray(
-        Image.fromarray(crop.astype(np.uint8)).resize((S, S), Image.BICUBIC)
-    ).astype(np.float32)
-    mask_s = np.asarray(
-        Image.fromarray((mask * 255).astype(np.uint8)).resize((S, S), Image.NEAREST)
-    ).astype(np.float32) / 255.0
-    mask_s = (mask_s > 0.5).astype(np.float32)
+    # 1) Cuadramos sin deformar: rellenamos el lado corto con borde reflejado.
+    side = max(ch, cw)
+    pad_b, pad_r = side - ch, side - cw
+    if pad_b or pad_r:
+        crop_sq = np.pad(crop, ((0, pad_b), (0, pad_r), (0, 0)), mode="reflect")
+        mask_sq = np.pad(mask, ((0, pad_b), (0, pad_r)), mode="constant")
+    else:
+        crop_sq, mask_sq = crop, mask
 
-    img_n = (crop_s / 127.5 - 1.0).transpose(2, 0, 1)[None]   # a [-1, 1]
-    msk_n = mask_s[None, None]
+    # 2) Solo si hace falta, escalamos el cuadrado a 512 (proporción intacta).
+    if side != S:
+        crop_in = np.asarray(
+            Image.fromarray(crop_sq.astype(np.uint8)).resize((S, S), Image.BICUBIC)
+        ).astype(np.float32)
+        mask_in = np.asarray(
+            Image.fromarray((mask_sq * 255).astype(np.uint8)).resize((S, S), Image.NEAREST)
+        ).astype(np.float32) / 255.0
+        mask_in = (mask_in > 0.5).astype(np.float32)
+    else:
+        crop_in, mask_in = crop_sq, mask_sq
+
+    img_n = (crop_in / 127.5 - 1.0).transpose(2, 0, 1)[None]   # a [-1, 1]
+    msk_n = mask_in[None, None]
     # MI-GAN espera 4 canales: [0.5 - máscara, imagen con el hueco borrado]
     x = np.concatenate([0.5 - msk_n, img_n * (1.0 - msk_n)], axis=1).astype(np.float32)
 
     out = sess.run(None, {sess.get_inputs()[0].name: x})[0]
-    res_s = ((out[0].transpose(1, 2, 0) + 1.0) * 127.5).clip(0, 255)
-    return np.asarray(
-        Image.fromarray(res_s.astype(np.uint8)).resize((cw, ch), Image.BICUBIC)
-    ).astype(np.float32)
+    res = ((out[0].transpose(1, 2, 0) + 1.0) * 127.5).clip(0, 255)
+
+    # 3) Deshacemos escalado y relleno para volver al recorte original.
+    if side != S:
+        res = np.asarray(
+            Image.fromarray(res.astype(np.uint8)).resize((side, side), Image.BICUBIC)
+        ).astype(np.float32)
+    return res[:ch, :cw]
+
+
+def _native_window(x0, y0, x1, y1, W, H, size):
+    """Ventana cuadrada de `size` px a resolución nativa, centrada en la marca.
+
+    Si el frame es más chico que `size`, devuelve lo que haya (el llamador se
+    encarga de cuadrarlo). Si la marca es más grande que `size`, se agranda la
+    ventana lo necesario para que entre con algo de contexto alrededor.
+    """
+    need = max(size, x1 - x0 + 32, y1 - y0 + 32)
+    win = min(need, W, H) if (W >= 32 and H >= 32) else min(W, H)
+
+    cx = (x0 + x1) // 2
+    cy = (y0 + y1) // 2
+    wx0 = max(0, min(cx - win // 2, W - win))
+    wy0 = max(0, min(cy - win // 2, H - win))
+    return wx0, wy0, min(W, wx0 + win), min(H, wy0 + win)
 
 
 def inpaint_frames_ai(
@@ -380,6 +416,11 @@ def inpaint_frames_ai(
         margin = max(32, int(0.6 * max(x1 - x0, y1 - y0)))
         cx0 = max(0, x0 - margin); cy0 = max(0, y0 - margin)
         cx1 = min(W, x1 + margin); cy1 = min(H, y1 + margin)
+
+        # MI-GAN rinde mejor con una ventana de 512x512 a resolución NATIVA
+        # (es su tamaño de entrenamiento): así no hay escalados de por medio.
+        if engine_name == "migan":
+            cx0, cy0, cx1, cy1 = _native_window(x0, y0, x1, y1, W, H, MIGAN_INPUT_SIZE)
 
         crop = arr[cy0:cy1, cx0:cx1]
         ch, cw = crop.shape[:2]
@@ -461,13 +502,24 @@ def upscale_frames_ai(
 
     # Reservamos el último tramo para el reescalado final si hace falta.
     ceiling = 0.94 if needs_resize else 0.99
+    started = time.time()
     with open(log_path, "w", encoding="utf-8", errors="replace") as logf:
         proc = subprocess.Popen(cmd, stdout=logf, stderr=subprocess.STDOUT)
         while proc.poll() is None:
             done = len(list(raw_dir.glob("*.png")))
+            elapsed = time.time() - started
             if progress and total_frames > 0:
-                shown = min(done, total_frames)  # nunca mostramos "28/24"
-                progress(min(ceiling, done / total_frames), f"Escalando frames ({shown}/{total_frames})")
+                if total_frames == 1:
+                    # Una sola imagen: no hay frames que contar, así que el
+                    # porcentaje quedaría clavado y parecería colgado. Mostramos
+                    # el tiempo transcurrido y un avance suave que nunca llega al
+                    # final hasta que el proceso realmente termina.
+                    creep = ceiling * (1.0 - 1.0 / (1.0 + elapsed / 25.0))
+                    progress(creep, f"Procesando la imagen… ({int(elapsed)}s)")
+                else:
+                    shown = min(done, total_frames)  # nunca mostramos "28/24"
+                    progress(min(ceiling, done / total_frames),
+                             f"Escalando frames ({shown}/{total_frames}) · {int(elapsed)}s")
             time.sleep(0.5)
 
     done = len(list(raw_dir.glob("*.png")))
